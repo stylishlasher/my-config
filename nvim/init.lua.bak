@@ -1,0 +1,183 @@
+-- ===== Опции =====
+vim.opt.number = false
+vim.opt.mouse = "a"
+vim.opt.clipboard = "unnamedplus"
+vim.opt.termguicolors = true
+vim.opt.showmode = false
+vim.opt.cmdheight = 1
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.incsearch = true
+vim.opt.hlsearch = true
+vim.opt.undofile = true
+vim.opt.whichwrap:append("<,>,[,]")
+
+-- Выделение Shift + Стрелки
+vim.opt.keymodel = "startsel,stopsel"
+vim.opt.selection = "exclusive"
+vim.opt.selectmode = ""
+
+vim.opt.langmap = "ФИСВУАПРШОЛДЬТЩЗЙКЫЕГМЦЧНЯ;ABCDEFGHIJKLMNOPQRSTUVWXYZ,фисвуапршолдьтщзйкыегмцчня;abcdefghijklmnopqrstuvwxyz"
+
+-- ===== Всегда в режиме вставки =====
+vim.keymap.set("i", "<Esc>", "<Nop>")
+vim.cmd("autocmd VimEnter * startinsert")
+vim.cmd("autocmd BufEnter * startinsert")
+vim.api.nvim_create_autocmd("ModeChanged", {
+    pattern = "*:n",
+    callback = function()
+        vim.schedule(function()
+            if vim.fn.mode() == "n" and vim.bo.buftype == "" and vim.bo.modifiable then
+                vim.cmd("startinsert")
+            end
+        end)
+    end,
+})
+-- Подсветка поиска гаснет при наборе текста
+vim.api.nvim_create_autocmd("InsertCharPre", {
+    callback = function()
+        vim.schedule(function() vim.o.hlsearch = false end)
+    end,
+})
+
+-- ===== Сохранение настроек (тема, эффект) =====
+local prefs = {}
+local prefs_path = vim.fn.stdpath("data") .. "/user_prefs.json"
+do
+    local f = io.open(prefs_path, "r")
+    if f then
+        local ok, data = pcall(vim.json.decode, f:read("*a"))
+        f:close()
+        if ok and type(data) == "table" then prefs = data end
+    end
+end
+local function save_prefs()
+    local f = io.open(prefs_path, "w")
+    if f then
+        f:write(vim.json.encode(prefs))
+        f:close()
+    end
+end
+
+-- ===== Хелпер для шорткатов (латиница + русская раскладка) =====
+local function map(lhs, ru, rhs, modes)
+    modes = modes or { "i", "n" }
+    vim.keymap.set(modes, "<C-" .. lhs .. ">", rhs, { silent = true })
+    if ru then
+        vim.keymap.set(modes, "<C-" .. ru .. ">", rhs, { silent = true })
+    end
+end
+
+-- Выделить всё
+local function select_all()
+    vim.cmd("stopinsert")
+    vim.cmd("normal! ggVG")
+end
+map("a", "ф", select_all)
+
+-- Вставка
+map("v", "м", "<C-r><C-o>+", { "i" })
+map("v", "м", "<C-r>+", { "c" })
+map("]", nil, "<C-r><C-o>+", { "i" })
+map("]", nil, "<C-r>+", { "c" })
+
+-- Копировать / вырезать / вставить поверх выделения
+map("c", "с", [["+y]], { "x" })
+map("x", "ч", [["+d]], { "x" })
+map("v", "м", [["+P]], { "x" })
+map("]", nil, [["+P]], { "x" })
+vim.keymap.set("x", "<BS>", [["_d]], { silent = true })
+vim.keymap.set("x", "<Del>", [["_d]], { silent = true })
+
+-- Отмена / повтор
+map("z", "я", "<C-o>u", { "i" })
+map("z", "я", "u", { "n" })
+map("y", "н", "<C-o><C-r>", { "i" })
+map("y", "н", "<C-r>", { "n" })
+
+-- Сохранить
+local function save_file()
+    if vim.fn.expand("%") == "" then
+        local cwd = vim.fn.getcwd()
+        if not cwd:find("/$") then cwd = cwd .. "/" end
+        local file = vim.fn.input("Сохранить как: ", cwd, "file")
+        if file and file ~= "" then
+            vim.cmd("write! " .. vim.fn.fnameescape(file))
+        end
+    else
+        vim.cmd("write")
+    end
+end
+map("s", "ы", save_file)
+
+-- Выход
+map("q", "й", function() vim.cmd("confirm quit") end)
+
+-- ===== Поиск =====
+local function search(dir)
+    vim.o.hlsearch = true
+    local pre = vim.fn.mode() == "i" and "<C-o>" or ""
+    vim.api.nvim_feedkeys(vim.keycode(pre .. dir), "nt", false)
+end
+local function find_next(back)
+    vim.o.hlsearch = true
+    pcall(vim.cmd, "normal! " .. (back and "N" or "n"))
+end
+map("f", "а", function() search("/") end)
+vim.keymap.set({ "i", "n" }, "<F3>", function() find_next(false) end, { silent = true })
+vim.keymap.set({ "i", "n" }, "<S-F3>", function() find_next(true) end, { silent = true })
+
+-- ===== Переход к строке =====
+local function goto_line()
+    local n = tonumber(vim.fn.input("Перейти к строке: "))
+    if n then
+        n = math.max(1, math.min(math.floor(n), vim.fn.line("$")))
+        vim.api.nvim_win_set_cursor(0, { n, 0 })
+        vim.cmd("normal! zz")
+    end
+end
+map("g", "п", goto_line)
+
+-- ===== Тема =====
+if prefs.theme then pcall(vim.cmd.colorscheme, prefs.theme) end
+local function select_theme()
+    local choice = vim.fn.input("Тема (Tab - список): ", "", "color")
+    if choice ~= "" then
+        if pcall(vim.cmd.colorscheme, choice) then
+            prefs.theme = choice
+            save_prefs()
+        else
+            vim.notify("Нет такой темы: " .. choice, vim.log.levels.WARN)
+        end
+    end
+end
+map("t", "е", select_theme)
+vim.keymap.set({ "i", "n" }, "<F2>", select_theme, { silent = true })
+
+-- ===== Эффекты курсора (Neovide) =====
+local function set_vfx(name)
+    vim.g.neovide_cursor_vfx_mode = (name == "off") and "" or name
+end
+local function select_vfx()
+    local modes = { "pixiedust", "railgun", "torpedo", "wireframe", "sonicboom", "ripple", "off" }
+    vim.ui.select(modes, { prompt = "Выберите эффект частиц:" }, function(choice)
+        if choice then
+            set_vfx(choice)
+            prefs.vfx = choice
+            save_prefs()
+        end
+    end)
+end
+map("e", "у", select_vfx)
+vim.keymap.set({ "i", "n" }, "<F4>", select_vfx, { silent = true })
+
+if vim.g.neovide then
+    set_vfx(prefs.vfx or "pixiedust")
+    vim.g.neovide_cursor_vfx_opacity = 200.0
+    vim.g.neovide_cursor_vfx_particle_lifetime = 1.2
+    vim.g.neovide_cursor_vfx_particle_density = 10.0
+    vim.g.neovide_cursor_animation_length = 0.15
+    vim.g.neovide_cursor_trail_size = 0.8
+    vim.g.neovide_opacity = 0.80
+    vim.o.guifont = "JetBrainsMono Nerd Font:h13"
+end
