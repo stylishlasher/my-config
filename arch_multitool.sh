@@ -490,11 +490,19 @@ install_aur_helper_core() {
     warn "Установка base-devel и git..."
     sudo pacman -S --needed --noconfirm base-devel git || { err "Не удалось установить зависимости."; return 1; }
 
+    # Берём готовый бинарный пакет (-bin), как делает и установщик Serpantinum:
+    # без долгой компиляции, а бинарь всё равно называется yay/paru.
+    local pkg="$helper"
+    case "$helper" in
+        yay)  pkg="yay-bin"  ;;
+        paru) pkg="paru-bin" ;;
+    esac
+
     ensure_work_dir
-    local dir="$WORK_DIR/$helper"
+    local dir="$WORK_DIR/$pkg"
     rm -rf "$dir"
-    warn "Клонирование AUR-репозитория ($helper)..."
-    if ! git clone --depth 1 "https://aur.archlinux.org/${helper}.git" "$dir"; then
+    warn "Клонирование AUR-репозитория ($pkg)..."
+    if ! git clone --depth 1 "https://aur.archlinux.org/${pkg}.git" "$dir"; then
         err "git clone не удался (проверьте сеть)."; return 1
     fi
 
@@ -503,7 +511,7 @@ install_aur_helper_core() {
     if confirm "Показать PKGBUILD?"; then
         ${PAGER:-less} "$dir/PKGBUILD"
     fi
-    confirm "Продолжить сборку $helper?" || { warn "Отменено."; return 1; }
+    confirm "Продолжить установку $helper?" || { warn "Отменено."; return 1; }
 
     if ( cd "$dir" && makepkg -si --noconfirm ); then
         ok "$helper успешно установлен!"
@@ -542,9 +550,9 @@ install_dotfiles_core() {
     # Serpantinum умеет собрать yay-bin сам, но по требованиям нужен AUR-хелпер.
     local helper; helper=$(aur_helper)
     if [[ -z "$helper" ]]; then
-        warn "AUR-хелпер (yay/paru) не найден."
-        if confirm "Установить AUR-хелпер сейчас?"; then
-            install_aur_helper_core "$(choose_helper)" || { err "Без AUR-хелпера продолжаем на свой риск."; }
+        info "AUR-хелпер (yay/paru) не найден — установщик Serpantinum соберёт yay-bin сам."
+        if confirm "Поставить AUR-хелпер заранее (быстрее, чем ждать установщик)?"; then
+            install_aur_helper_core "$(choose_helper)" || warn "Не удалось поставить заранее — Serpantinum соберёт yay-bin сам."
             helper=$(aur_helper)
         fi
     fi
@@ -1090,9 +1098,22 @@ full_setup() {
 
     ensure_sudo || { pause; return; }
 
-    update_system_core
+    # Serpantinum на «чистой» системе сам делает полный апгрейд (pacman -Syyu),
+    # поэтому не дублируем его: обновляемся сами только если Serpantinum уже стоит.
+    if [[ -f "$SERPANTINUM_STATE_DIR/version" ]]; then
+        update_system_core
+    else
+        info "Serpantinum ещё не установлен: полный апгрейд системы выполнит его установщик — пропускаю дублирование."
+    fi
+
     install_aur_helper_core "$(choose_helper)" || warn "AUR-хелпер не установлен — часть шагов может не сработать."
-    install_dotfiles_core || warn "Dotfiles не установлены."
+
+    if ! install_dotfiles_core; then
+        warn "Dotfiles не установлены."
+        # Если апгрейд был пропущен, а Serpantinum так и не отработал — обновляемся сами.
+        [[ -f "$SERPANTINUM_STATE_DIR/version" ]] || update_system_core
+    fi
+
     install_fish_core
     install_neovim_core
     apply_archy_themes
