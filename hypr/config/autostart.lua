@@ -1,6 +1,0 @@
-hl.on("hyprland.start", function()
-  hl.exec_cmd("wl-paste --type text --watch cliphist store")
-  hl.exec_cmd("wl-paste --type image --watch cliphist store")
-  hl.exec_cmd("serpantinumd start")
-  hl.exec_cmd("sh -c 'while true; do pw-link -d ee_soe_output_level:output_FL easyeffects_source:input_FL; pw-link -d ee_soe_output_level:output_FR easyeffects_source:input_FR; sleep 3; done' >/dev/null 2>&1")
-end)
