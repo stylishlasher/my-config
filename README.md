@@ -100,7 +100,7 @@ my-config/
 | fish | `~/.config/fish/` |
 | neovim | `~/.config/nvim/init.lua` |
 | neovide | `~/.config/neovide/` (если есть) |
-| пресеты Serpantinum | `~/.local/state/serpantinum/presets/` (для совместимости также `.../themes/`) |
+| пресеты Serpantinum | `~/.local/state/serpantinum/presets/` |
 
 > [!WARNING]
 > После копирования пресетов **обязательно** включите нужный в

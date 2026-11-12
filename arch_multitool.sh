@@ -31,10 +31,9 @@ DOTFILES_CMD="curl -fsSL install.serpantinum.dev | bash"
 
 # Файлы-пресеты Serpantinum (archy), которые нужно применить
 THEME_FILES=(glass.json archy-style.json)
-# Каталог состояния Serpantinum и подкаталоги для пресетов.
-# В разных версиях он называется presets или themes — пишем в оба.
+# Каталог состояния Serpantinum и подкаталог для пресетов (archy)
 SERPANTINUM_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/serpantinum"
-THEME_SUBDIRS=(presets themes)
+THEME_DIR="$SERPANTINUM_STATE_DIR/presets"
 # Плагины fish (для fisher)
 FISH_PLUGINS=(jorgebucaran/fisher ilancosman/tide@v6)
 
@@ -590,7 +589,7 @@ apply_archy_themes() {
     resolve_configs || return 1
 
     # Считаем, сколько файлов-пресетов реально есть в конфигах
-    local f d found=0
+    local f found=0
     for f in "${THEME_FILES[@]}"; do
         [[ -f "$CONFIGS_DIR/$f" ]] && found=$((found + 1))
     done
@@ -599,15 +598,12 @@ apply_archy_themes() {
         return 1
     fi
 
-    # Кладём пресеты во все известные каталоги (presets и themes)
-    for d in "${THEME_SUBDIRS[@]}"; do
-        local dst="$SERPANTINUM_STATE_DIR/$d"
-        mkdir -p "$dst"
-        for f in "${THEME_FILES[@]}"; do
-            [[ -f "$CONFIGS_DIR/$f" ]] && cp -a "$CONFIGS_DIR/$f" "$dst/$f"
-        done
-        ok "Пресеты Serpantinum применены ($found) → $dst"
+    # Кладём пресеты в ~/.local/state/serpantinum/presets
+    mkdir -p "$THEME_DIR"
+    for f in "${THEME_FILES[@]}"; do
+        [[ -f "$CONFIGS_DIR/$f" ]] && cp -a "$CONFIGS_DIR/$f" "$THEME_DIR/$f"
     done
+    ok "Пресеты Serpantinum применены ($found) → $THEME_DIR"
 
     serpantinum_notice
 }
