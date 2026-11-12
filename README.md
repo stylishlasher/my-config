@@ -32,6 +32,18 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 
 ---
 
+## ⚠️ ПРЕСЕТЫ НУЖНО ВКЛЮЧИТЬ ВРУЧНУЮ
+
+> [!IMPORTANT]
+> Скрипт **только копирует** файлы-пресеты (`glass.json`, `archy-style.json`) в
+> `~/.local/state/serpantinum/presets`. Чтобы тема применилась, её надо **выбрать вручную**:
+>
+> **Serpantinum → Настройки → Presets (Пресеты) → выбрать нужную тему.**
+>
+> Без этого шага цвета/оформление не изменятся.
+
+---
+
 ## Что это за скрипт
 
 **Arch Multitool** (`arch_multitool.sh`) — универсальный инструмент для чистой установки,
@@ -88,7 +100,12 @@ my-config/
 | fish | `~/.config/fish/` |
 | neovim | `~/.config/nvim/init.lua` |
 | neovide | `~/.config/neovide/` (если есть) |
-| темы Serpantinum | `~/.local/state/serpantinum/themes/` |
+| пресеты Serpantinum | `~/.local/state/serpantinum/presets/` (для совместимости также `.../themes/`) |
+
+> [!WARNING]
+> После копирования пресетов **обязательно** включите нужный в
+> **Serpantinum → Настройки → Presets (Пресеты) → выбрать тему**. Само по себе
+> копирование файлов внешний вид не меняет.
 
 ---
 

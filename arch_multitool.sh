@@ -29,8 +29,12 @@ CONFIG_TARBALL="https://codeload.github.com/${REPO_SLUG}/tar.gz/refs/heads/${REP
 # Команда установки dotfiles (используется, если нет локального install.txt)
 DOTFILES_CMD="curl -fsSL install.serpantinum.dev | bash"
 
-# Файлы тем Serpantinum (archy), которые нужно применить
+# Файлы-пресеты Serpantinum (archy), которые нужно применить
 THEME_FILES=(glass.json archy-style.json)
+# Каталог состояния Serpantinum и подкаталоги для пресетов.
+# В разных версиях он называется presets или themes — пишем в оба.
+SERPANTINUM_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/serpantinum"
+THEME_SUBDIRS=(presets themes)
 # Плагины fish (для fisher)
 FISH_PLUGINS=(jorgebucaran/fisher ilancosman/tide@v6)
 
@@ -159,6 +163,20 @@ normalize_paths() {
     grep -rlI -- '/home/lislash' "$dir" 2>/dev/null | while IFS= read -r f; do
         sed -i "s|/home/lislash|$HOME|g" "$f"
     done
+}
+
+# ОГРОМНАЯ памятка: пресеты Serpantinum нужно включить вручную
+serpantinum_notice() {
+    local b="${BOLD}${YELLOW}" n="${NC}"
+    local bar="████████████████████████████████████████████████████████████████████████████████████"
+    echo
+    echo -e "${b}${bar}${n}"
+    echo -e "${b}  ⚠  ВАЖНО: ПРЕСЕТЫ ПРИМЕНЕНЫ, НО ИХ НУЖНО ВКЛЮЧИТЬ ВРУЧНУЮ!${n}"
+    echo -e "${b}${bar}${n}"
+    echo -e "${b}  Serpantinum  →  Настройки  →  Presets (Пресеты)  →  выбрать тему${n}"
+    echo -e "${b}  Доступные темы:  glass  /  archy-style${n}"
+    echo -e "${b}${bar}${n}"
+    echo
 }
 
 # ------------------------------------------------------------------------------
@@ -570,28 +588,28 @@ install_dotfiles() {
 # ------------------------------------------------------------------------------
 apply_archy_themes() {
     resolve_configs || return 1
-    local dst="$HOME/.local/state/serpantinum/themes"
-    mkdir -p "$dst"
-    local found=0 f
+
+    # Считаем, сколько файлов-пресетов реально есть в конфигах
+    local f d found=0
     for f in "${THEME_FILES[@]}"; do
-        if [[ -f "$CONFIGS_DIR/$f" ]]; then
-            cp -a "$CONFIGS_DIR/$f" "$dst/$f"
-            found=$((found + 1))
-        fi
+        [[ -f "$CONFIGS_DIR/$f" ]] && found=$((found + 1))
     done
-    if (( found > 0 )); then
-        ok "Темы Serpantinum применены ($found) → $dst"
-    else
-        warn "Файлы тем не найдены в конфигах (${THEME_FILES[*]})."
+    if (( found == 0 )); then
+        warn "Файлы пресетов не найдены в конфигах (${THEME_FILES[*]})."
         return 1
     fi
-}
 
-apply_archy_themes_menu() {
-    clear
-    info "=== Применение тем Serpantinum (archy) ==="
-    apply_archy_themes
-    pause
+    # Кладём пресеты во все известные каталоги (presets и themes)
+    for d in "${THEME_SUBDIRS[@]}"; do
+        local dst="$SERPANTINUM_STATE_DIR/$d"
+        mkdir -p "$dst"
+        for f in "${THEME_FILES[@]}"; do
+            [[ -f "$CONFIGS_DIR/$f" ]] && cp -a "$CONFIGS_DIR/$f" "$dst/$f"
+        done
+        ok "Пресеты Serpantinum применены ($found) → $dst"
+    done
+
+    serpantinum_notice
 }
 
 # ------------------------------------------------------------------------------
@@ -1085,6 +1103,7 @@ full_setup() {
 
     echo
     ok "Полная установка завершена! Рекомендуется перезагрузка."
+    serpantinum_notice
     pause
 }
 
