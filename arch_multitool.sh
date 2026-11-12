@@ -39,7 +39,7 @@ FISH_PLUGINS=(jorgebucaran/fisher ilancosman/tide@v6)
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
-ESSENTIALS=(discord telegram-desktop gpu-screen-recorder gpu-screen-recorder-ui spotify steam btop)
+ESSENTIALS=(telegram-desktop gpu-screen-recorder gpu-screen-recorder-ui spotify steam btop)
 PACCACHE_KEEP=2
 JOURNAL_MAX="100M"
 BACKUP_DIR="$HOME"
@@ -130,6 +130,28 @@ pacman_busy() {
 # Установка пакета(ов) через pacman с запросом sudo
 pac_install() {
     sudo pacman -S --needed --noconfirm "$@"
+}
+
+# Включить репозиторий [multilib] в /etc/pacman.conf (нужен для steam)
+enable_multilib() {
+    local conf=/etc/pacman.conf
+    grep -qE '^\[multilib\]' "$conf" 2>/dev/null && return 0
+
+    if ! grep -qE '^#[[:space:]]*\[multilib\]' "$conf" 2>/dev/null; then
+        warn "Секция [multilib] не найдена в $conf — включите её вручную."
+        return 1
+    fi
+
+    ensure_sudo || return 1
+    info "Включаю репозиторий [multilib] (нужен для steam)..."
+    sudo cp -a "$conf" "${conf}.bak.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+    sudo sed -i '/^#[[:space:]]*\[multilib\]/{s/^#[[:space:]]*//;n;s/^#[[:space:]]*//}' "$conf"
+    if ! grep -qE '^\[multilib\]' "$conf"; then
+        err "Не удалось включить [multilib]."
+        return 1
+    fi
+    sudo pacman -Sy --noconfirm || { err "pacman -Sy не удался."; return 1; }
+    ok "[multilib] включён. Рекомендуется полное обновление системы (пункт 2)."
 }
 
 # Убедиться, что установлены нужные инструменты (curl/git/tar/...)
@@ -780,29 +802,41 @@ install_essentials() {
     ensure_sudo || { pause; return; }
     pacman_busy && { pause; return; }
 
-    # Steam требует репозиторий multilib
-    local -a pkgs=("${ESSENTIALS[@]}")
-    if printf '%s\n' "${pkgs[@]}" | grep -qx steam && ! grep -qE '^\[multilib\]' /etc/pacman.conf; then
-        warn "Репозиторий [multilib] не включён в /etc/pacman.conf — steam будет пропущен."
-        local -a filtered=(); local p
-        for p in "${pkgs[@]}"; do [[ "$p" != steam ]] && filtered+=("$p"); done
-        pkgs=("${filtered[@]}")
+    # Steam требует репозиторий [multilib] — включаем при необходимости
+    if printf '%s\n' "${ESSENTIALS[@]}" | grep -qx steam; then
+        enable_multilib || warn "Без [multilib] steam не установится."
     fi
+
+    local -a pkgs=("${ESSENTIALS[@]}")
 
     echo -e "${YELLOW}Выберите браузер:${NC}"
     echo "1) Firefox"
-    echo "2) LibreWolf (AUR)"
-    echo "3) Chromium"
+    echo "2) Chromium"
+    echo "3) LibreWolf (AUR)"
     echo "4) Не устанавливать"
     local br browser
     read -rp "Ваш выбор [1-4]: " br
     case "$br" in
-        2) browser="librewolf-bin" ;;
-        3) browser="chromium" ;;
+        2) browser="chromium" ;;
+        3) browser="librewolf-bin" ;;
         4) browser="" ;;
         *) browser="firefox" ;;
     esac
     [[ -n "$browser" ]] && pkgs+=("$browser")
+
+    echo
+    echo -e "${YELLOW}Выберите клиент Discord:${NC}"
+    echo "1) Discord (официальный)"
+    echo "2) Vencord (Vesktop с предустановленным Vencord, AUR)"
+    echo "3) Не устанавливать"
+    local ms messenger
+    read -rp "Ваш выбор [1-3]: " ms
+    case "$ms" in
+        2) messenger="vesktop-bin" ;;
+        3) messenger="" ;;
+        *) messenger="discord" ;;
+    esac
+    [[ -n "$messenger" ]] && pkgs+=("$messenger")
 
     echo
     info "К установке: ${pkgs[*]}"
