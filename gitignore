@@ -1,0 +1,17 @@
+# OS and editor leftovers
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Local environment files (keep example templates)
+.env
+.env.*
+!.env.example
+
+# Machine-specific Fish universal variables
+fish/fish_variables
