@@ -42,7 +42,7 @@ SOBER_APP="org.vinegarhq.Sober"
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
-ESSENTIALS=(telegram-desktop gpu-screen-recorder gpu-screen-recorder-ui spotify steam btop)
+ESSENTIALS=(telegram-desktop gpu-screen-recorder gpu-screen-recorder-ui spotify steam btop mpv)
 PACCACHE_KEEP=2
 JOURNAL_MAX="100M"
 BACKUP_DIR="$HOME"
@@ -771,6 +771,22 @@ install_neovim_core() {
 install_neovim() { clear; install_neovim_core; pause; }
 
 # ------------------------------------------------------------------------------
+# 7.1 MPV (медиаплеер)
+# ------------------------------------------------------------------------------
+install_mpv_core() {
+    info "=== Установка mpv ==="
+    if has mpv; then ok "mpv уже установлен."; return 0; fi
+    ensure_sudo || return 1
+    pacman_busy && return 1
+
+    warn "Установка mpv..."
+    pac_install mpv || { err "Не удалось установить mpv."; return 1; }
+    ok "mpv установлен."
+}
+
+install_mpv() { clear; install_mpv_core; pause; }
+
+# ------------------------------------------------------------------------------
 # 8. ПРИМЕНИТЬ МОИ КОНФИГИ (без установки пакетов)
 # ------------------------------------------------------------------------------
 apply_all_configs() {
@@ -1199,8 +1215,9 @@ full_setup() {
     echo "  3. Установка dotfiles (Serpantinum)"
     echo "  4. Установка Fish + плагины + конфиг"
     echo "  5. Установка Neovim + Neovide + конфиг"
-    echo "  6. Flatpak + Flathub (и Sober по выбору)"
-    echo "  7. Применение тем Serpantinum (archy)"
+    echo "  6. Установка mpv"
+    echo "  7. Flatpak + Flathub (и Sober по выбору)"
+    echo "  8. Применение тем Serpantinum (archy)"
     echo
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
 
@@ -1224,6 +1241,7 @@ full_setup() {
 
     install_fish_core
     install_neovim_core
+    install_mpv_core || warn "mpv не установлен."
     setup_flatpak_core || warn "Flatpak не настроен."
     if confirm "Установить Sober (Roblox) через Flatpak?"; then install_sober; fi
     apply_archy_themes
@@ -1266,9 +1284,10 @@ main_menu() {
         echo -e "  ${GREEN}7)${NC} Применить мои конфиги (fish / nvim / темы)"
         echo -e "  ${GREEN}8)${NC} Установить основной набор ПО"
         echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
+        echo -e "  ${GREEN}10)${NC} Установить mpv"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-9]: " choice
+        read -rp "Номер пункта [0-10]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -1280,6 +1299,7 @@ main_menu() {
             7) apply_all_configs ;;
             8) install_essentials ;;
             9) setup_flatpak ;;
+            10) install_mpv ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac
