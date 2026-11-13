@@ -15,7 +15,7 @@
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash
 ```
 
-Полная установка без меню (AUR-хелпер → dotfiles → fish → neovim/neovide → темы):
+Полная установка без меню (AUR-хелпер → dotfiles → fish → neovim/neovide → mpv → GSR → архивы → Flatpak → LibreWolf → файрвол → темы):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash -s -- -f
@@ -35,12 +35,40 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 ## ⚠️ ПРЕСЕТЫ НУЖНО ВКЛЮЧИТЬ ВРУЧНУЮ
 
 > [!IMPORTANT]
-> Скрипт **только копирует** файлы-пресеты (`glass.json`, `archy-style.json`) в
+> Скрипт **только копирует** файлы-пресеты из репозитория (все `*.json` в корне,
+> например `glass.json`, `archy-style.json`, `ultra-minimalist.json`) в
 > `~/.local/state/serpantinum/presets`. Чтобы тема применилась, её надо **выбрать вручную**:
 >
 > **Serpantinum → Настройки → Presets (Пресеты) → выбрать нужную тему.**
 >
 > Без этого шага цвета/оформление не изменятся.
+
+---
+
+## ⚠️ ДРАЙВЕРЫ GPU НЕ УСТАНАВЛИВАЮТСЯ АВТОМАТИЧЕСКИ
+
+> [!WARNING]
+> Скрипт **не ставит** драйверы видеокарты. Установите их под свою GPU **до перезагрузки**,
+> иначе Hyprland / Serpantinum могут не запуститься:
+>
+> ```bash
+> # NVIDIA
+> sudo pacman -S nvidia nvidia-utils nvidia-settings
+> # AMD
+> sudo pacman -S mesa vulkan-radeon libva-mesa-driver
+> # Intel
+> sudo pacman -S mesa vulkan-intel intel-media-driver
+> ```
+
+---
+
+## Скриншоты пресетов
+
+| Пресет | Вид |
+|---|---|
+| `glass` | ![glass](placeholders/glass.png) |
+| `archy-style` | ![archy-style](placeholders/archy-style.png) |
+| `ultra-minimalist` | ![ultra-minimalist](placeholders/ultra-minimalist.png) |
 
 ---
 
@@ -53,10 +81,18 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 - полная установка окружения одной командой;
 - AUR-хелпер (`yay` / `paru`);
 - dotfiles (окружение **Serpantinum**, см. раздел «Благодарности»);
+- раскладка клавиатуры `us,ru` в Hyprland (автопатч `settings.lua`);
 - `fish` + плагины (`fisher`, `tide`) с применением конфига;
 - `neovim` + `neovide` с применением конфига и Nerd Font;
-- применение личных конфигов и тем Serpantinum (`glass`, `archy-style`);
-- основной набор ПО.
+- `mpv` (медиаплеер) — ставится автоматически;
+- **GPU Screen Recorder** (`gpu-screen-recorder` + UI-оверлей);
+- утилиты для архивов: **PeaZip** (GUI) и консольные (`tar`, `zip`, `unzip`, `unrar`, `7zip`, ...);
+- **файрвол** — автонастройка `ufw` или `firewalld` (с объяснением разницы);
+- применение личных конфигов и тем Serpantinum (`glass`, `archy-style`, `ultra-minimalist` — авто-поиск всех пресетов);
+- `flatpak` + репозиторий Flathub (автонастройка) и **Sober** (Roblox на Linux) по выбору;
+- **FreeSM Launcher** (Minecraft, AUR) по выбору;
+- основной набор ПО с выбором галочками; браузер: Firefox / Chromium / **LibreWolf**;
+  клиент Discord: Discord / Vencord; **steam** — по желанию (по умолчанию выключен).
 
 **Обслуживание системы (без установки):**
 - аудит и оценка системы (отчёт в файл);
@@ -89,9 +125,15 @@ my-config/
 ├── install.txt            # команда установки Serpantinum (читается мультитулом)
 ├── fish/                  # конфиг fish (config.fish, conf.d, functions, ...)
 ├── nvim/                  # конфиг Neovim (init.lua)
+├── placeholders/          # скриншоты пресетов для README
 ├── glass.json             # тема Serpantinum «стекло»
-└── archy-style.json       # тема Serpantinum «минимализм»
+├── archy-style.json       # тема Serpantinum «минимализм»
+└── ultra-minimalist.json  # тема Serpantinum «ультра-минимализм»
 ```
+
+> Пресеты определяются автоматически: функция `apply_archy_themes` находит **все**
+> `*.json` в корне репозитория и копирует их в presets.
+> Новые темы из репозитория подхватываются сами при нажатии пункта 7 меню.
 
 Куда применяются конфиги:
 
@@ -100,6 +142,7 @@ my-config/
 | fish | `~/.config/fish/` |
 | neovim | `~/.config/nvim/init.lua` |
 | neovide | `~/.config/neovide/` (если есть) |
+| раскладка клавиатуры | `~/.config/hypr/config/settings.lua` (`kb_layout = "us,ru"`) |
 | пресеты Serpantinum | `~/.local/state/serpantinum/presets/` |
 
 > [!WARNING]
@@ -125,7 +168,7 @@ my-config/
 curl -fsSL install.serpantinum.dev | bash
 ```
 
-Темы `glass.json` и `archy-style.json` — это пресеты оформления Serpantinum.
+Темы `glass.json`, `archy-style.json` и `ultra-minimalist.json` — это пресеты оформления Serpantinum.
 
 ---
 

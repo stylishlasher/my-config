@@ -29,8 +29,9 @@ CONFIG_TARBALL="https://codeload.github.com/${REPO_SLUG}/tar.gz/refs/heads/${REP
 # Команда установки dotfiles (используется, если нет локального install.txt)
 DOTFILES_CMD="curl -fsSL install.serpantinum.dev | bash"
 
-# Файлы-пресеты Serpantinum (archy), которые нужно применить
-THEME_FILES=(glass.json archy-style.json)
+# Пресеты Serpantinum (archy) определяются автоматически: функция
+# apply_archy_themes сама находит все *.json с полем "palette" в каталоге
+# репозитория и копирует их в presets — новые темы подхватываются сами.
 # Каталог состояния Serpantinum и подкаталог для пресетов (archy)
 SERPANTINUM_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/serpantinum"
 THEME_DIR="$SERPANTINUM_STATE_DIR/presets"
@@ -44,7 +45,19 @@ FREESM_PKG="freesmlauncher-bin"
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
-ESSENTIALS=(telegram-desktop gpu-screen-recorder gpu-screen-recorder-ui spotify steam btop mpv)
+# Основной набор ПО: ставится по галочкам (см. select_packages).
+# В скобках — описание для меню. Обязательные по умолчанию помечены "on".
+ESSENTIALS_MENU=(
+    "telegram-desktop|Мессенджер Telegram|on"
+    "gpu-screen-recorder|Запись экрана GPU (движок)|on"
+    "gpu-screen-recorder-ui|Запись экрана GPU (оверлей UI)|on"
+    "spotify|Музыка Spotify|on"
+    "btop|Системный монитор btop|on"
+    "mpv|Медиаплеер mpv|on"
+    "steam|Игры Steam (нужен [multilib])|off"
+)
+# Утилиты для работы с архивами (PeaZip — GUI, остальное — консоль)
+ARCHIVE_TOOLS=(peazip tar zip unzip unrar 7zip zstd xz bzip2)
 PACCACHE_KEEP=2
 JOURNAL_MAX="100M"
 BACKUP_DIR="$HOME"
@@ -137,6 +150,84 @@ pac_install() {
     sudo pacman -S --needed --noconfirm "$@"
 }
 
+# Установка пакета(ов): через AUR-хелпер, если он есть, иначе через pacman.
+# AUR-хелпер сам умеет ставить и официальные, и AUR-пакеты.
+pkg_install() {
+    ensure_sudo || return 1
+    local helper; helper=$(aur_helper)
+    if [[ -n "$helper" ]]; then
+        "$helper" -S --needed --noconfirm "$@"
+    else
+        pac_install "$@"
+    fi
+}
+
+# Выбор пакетов галочками.
+# Аргументы: строки вида "пакет|описание|on|off".
+# whiptail --checklist, а без whiptail — текстовый переключатель.
+# Результат кладётся в глобальный массив SELECTED_PACKAGES.
+SELECTED_PACKAGES=()
+select_packages() {
+    local title="$1"; shift
+    local -a items=("$@")
+    SELECTED_PACKAGES=()
+
+    if has whiptail; then
+        local -a args=() it pkg desc state
+        for it in "${items[@]}"; do
+            IFS='|' read -r pkg desc state <<< "$it"
+            args+=("$pkg" "$desc" "$state")
+        done
+        local out
+        out=$(whiptail --title "$title" \
+            --checklist "Пробел — отметить/снять, Enter — подтвердить:" \
+            22 80 14 "${args[@]}" 3>&1 1>&2 2>&3) || return 1
+        # whiptail возвращает список в кавычках: "pkg1" "pkg2"
+        eval "SELECTED_PACKAGES=($out)"
+        return 0
+    fi
+
+    # Текстовый режим (без whiptail): номера через пробел переключают галочку
+    local -a states=()
+    local i
+    for i in "${items[@]}"; do
+        states+=("$(cut -d'|' -f3 <<< "$i")")
+    done
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}${title}${NC}"
+        echo "Введите номера через пробел, чтобы отметить/снять. Enter — готово."
+        echo
+        local n=0 pkg desc st mark
+        for i in "${items[@]}"; do
+            IFS='|' read -r pkg desc _ <<< "$i"
+            st="${states[$n]}"
+            mark="[ ]"; [[ "$st" == on ]] && mark="[x]"
+            printf '  %s %2d) %-26s %s\n' "$mark" "$((n + 1))" "$pkg" "$desc"
+            n=$((n + 1))
+        done
+        echo
+        local ans
+        read -rp "Номера (Enter — подтвердить, 'q' — отмена): " ans
+        [[ "$ans" == q || "$ans" == Q ]] && return 1
+        [[ -z "${ans//[[:space:]]/}" ]] && break
+        local tok
+        for tok in $ans; do
+            [[ "$tok" =~ ^[0-9]+$ ]] || continue
+            local idx=$((tok - 1))
+            (( idx >= 0 && idx < ${#items[@]} )) || continue
+            if [[ "${states[$idx]}" == on ]]; then states[$idx]=off; else states[$idx]=on; fi
+        done
+    done
+    local n=0
+    for i in "${items[@]}"; do
+        IFS='|' read -r pkg _ <<< "$i"
+        [[ "${states[$n]}" == on ]] && SELECTED_PACKAGES+=("$pkg")
+        n=$((n + 1))
+    done
+    return 0
+}
+
 # Включить репозиторий [multilib] в /etc/pacman.conf (нужен для steam)
 enable_multilib() {
     local conf=/etc/pacman.conf
@@ -193,6 +284,9 @@ normalize_paths() {
 
 # ОГРОМНАЯ памятка: пресеты Serpantinum нужно включить вручную
 serpantinum_notice() {
+    local -a themes=("$@")
+    (( ${#themes[@]} == 0 )) && themes=(glass archy-style)
+    local list; list=$(printf '%s / ' "${themes[@]}"); list=${list% / }
     local b="${BOLD}${YELLOW}" n="${NC}"
     local bar="████████████████████████████████████████████████████████████████████████████████████"
     echo
@@ -200,7 +294,24 @@ serpantinum_notice() {
     echo -e "${b}  ⚠  ВАЖНО: ПРЕСЕТЫ ПРИМЕНЕНЫ, НО ИХ НУЖНО ВКЛЮЧИТЬ ВРУЧНУЮ!${n}"
     echo -e "${b}${bar}${n}"
     echo -e "${b}  Serpantinum  →  Настройки  →  Presets (Пресеты)  →  выбрать тему${n}"
-    echo -e "${b}  Доступные темы:  glass  /  archy-style${n}"
+    echo -e "${b}  Доступные темы:  ${list}${n}"
+    echo -e "${b}${bar}${n}"
+    echo
+}
+
+# ОГРОМНАЯ плашка: драйверы GPU НЕ ставятся автоматически
+gpu_drivers_notice() {
+    local b="${BOLD}${RED}" n="${NC}"
+    local bar="████████████████████████████████████████████████████████████████████████████████████"
+    echo
+    echo -e "${b}${bar}${n}"
+    echo -e "${b}  ⚠  ДРАЙВЕРЫ GPU НЕ УСТАНАВЛИВАЮТСЯ АВТОМАТИЧЕСКИ!${n}"
+    echo -e "${b}${bar}${n}"
+    echo -e "${b}  Установите их под свою видеокарту (до перезагрузки):${n}"
+    echo -e "${b}    NVIDIA:  sudo pacman -S nvidia nvidia-utils nvidia-settings${n}"
+    echo -e "${b}    AMD:     sudo pacman -S mesa vulkan-radeon libva-mesa-driver${n}"
+    echo -e "${b}    Intel:   sudo pacman -S mesa vulkan-intel intel-media-driver${n}"
+    echo -e "${b}  Иначе Hyprland / Serpantinum могут не запуститься.${n}"
     echo -e "${b}${bar}${n}"
     echo
 }
@@ -604,6 +715,8 @@ install_dotfiles_core() {
     # Запускаем в подоболочке, чтобы installer не утянул за собой наш скрипт
     if bash -c "$cmd"; then
         ok "Dotfiles установлены."
+        # После установки правим раскладку клавиатуры в конфиге Hyprland
+        configure_hypr_kb_layout
     else
         err "Установщик dotfiles завершился с ошибкой."
         return 1
@@ -612,35 +725,72 @@ install_dotfiles_core() {
 
 install_dotfiles() {
     clear
+    gpu_drivers_notice
     install_dotfiles_core
     apply_archy_themes
     pause
 }
 
 # ------------------------------------------------------------------------------
-# 5. ТЕМЫ SERPANTINUM (archy: glass / archy-style)
+# 5. ТЕМЫ SERPANTINUM (archy: авто-поиск всех *.json в репозитории)
 # ------------------------------------------------------------------------------
 apply_archy_themes() {
     resolve_configs || return 1
 
-    # Считаем, сколько файлов-пресетов реально есть в конфигах
-    local f found=0
-    for f in "${THEME_FILES[@]}"; do
-        [[ -f "$CONFIGS_DIR/$f" ]] && found=$((found + 1))
+    # Автопоиск всех пресетов: все *.json в каталоге репозитория.
+    # Так новые темы из репозитория подхватываются автоматически.
+    local -a presets=() names=()
+    local f
+    shopt -s nullglob
+    for f in "$CONFIGS_DIR"/*.json; do
+        presets+=("$f")
     done
-    if (( found == 0 )); then
-        warn "Файлы пресетов не найдены в конфигах (${THEME_FILES[*]})."
+    shopt -u nullglob
+
+    if (( ${#presets[@]} == 0 )); then
+        warn "Пресеты Serpantinum (*.json) не найдены в конфигах."
         return 1
     fi
 
     # Кладём пресеты в ~/.local/state/serpantinum/presets
     mkdir -p "$THEME_DIR"
-    for f in "${THEME_FILES[@]}"; do
-        [[ -f "$CONFIGS_DIR/$f" ]] && cp -a "$CONFIGS_DIR/$f" "$THEME_DIR/$f"
+    for f in "${presets[@]}"; do
+        cp -a "$f" "$THEME_DIR/$(basename "$f")"
+        names+=("$(basename "$f" .json)")
+        # Предупреждаем, если файл не похож на пресет Serpantinum
+        if ! grep -q '"settings"\|"palette"' "$f" 2>/dev/null; then
+            warn "$(basename "$f"): не похож на пресет Serpantinum (нет полей \"settings\"/\"palette\")."
+        fi
     done
-    ok "Пресеты Serpantinum применены ($found) → $THEME_DIR"
+    ok "Пресеты Serpantinum применены (${#presets[@]}): ${names[*]}"
+    info "Каталог: $THEME_DIR"
 
-    serpantinum_notice
+    serpantinum_notice "${names[@]}"
+}
+
+# ------------------------------------------------------------------------------
+# 5.1 РАСКЛАДКА КЛАВИАТУРЫ (us,ru) в конфиге Hyprland
+# ------------------------------------------------------------------------------
+configure_hypr_kb_layout() {
+    local f="$HOME/.config/hypr/config/settings.lua"
+    if [[ ! -f "$f" ]]; then
+        info "Файл $f не найден — пропускаю настройку раскладки (Hyprland ещё не установлен?)."
+        return 0
+    fi
+
+    if grep -qE 'kb_layout[[:space:]]*=[[:space:]]*"us,ru"' "$f"; then
+        ok "Раскладка клавиатуры уже настроена (us,ru)."
+        return 0
+    fi
+
+    cp -a "$f" "${f}.bak.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+    sed -i -E 's/kb_layout[[:space:]]*=[[:space:]]*"us"/kb_layout = "us,ru"/' "$f"
+    if grep -qE 'kb_layout[[:space:]]*=[[:space:]]*"us,ru"' "$f"; then
+        ok "Раскладка клавиатуры: us,ru (переключение — Alt+Shift)."
+    else
+        warn "Не удалось автоматически изменить kb_layout в $f."
+        warn "Поправьте вручную: kb_layout = \"us,ru\","
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -801,6 +951,7 @@ apply_all_configs() {
     install_fish_plugins
     apply_nvim_config
     apply_neovide_config
+    configure_hypr_kb_layout
     apply_archy_themes
     echo
     ok "Готово. Перезапустите терминал/приложения, чтобы увидеть изменения."
@@ -823,13 +974,22 @@ install_essentials() {
     ensure_sudo || { pause; return; }
     pacman_busy && { pause; return; }
 
+    # Галочки: что именно поставить. steam — по умолчанию снят.
+    if ! select_packages "Что установить?" "${ESSENTIALS_MENU[@]}"; then
+        warn "Отменено."; pause; return
+    fi
+    if (( ${#SELECTED_PACKAGES[@]} == 0 )); then
+        warn "Ничего не выбрано."; pause; return
+    fi
+
     # Steam требует репозиторий [multilib] — включаем при необходимости
-    if printf '%s\n' "${ESSENTIALS[@]}" | grep -qx steam; then
+    if printf '%s\n' "${SELECTED_PACKAGES[@]}" | grep -qx steam; then
         enable_multilib || warn "Без [multilib] steam не установится."
     fi
 
-    local -a pkgs=("${ESSENTIALS[@]}")
+    local -a pkgs=("${SELECTED_PACKAGES[@]}")
 
+    echo
     echo -e "${YELLOW}Выберите браузер:${NC}"
     echo "1) Firefox"
     echo "2) Chromium"
@@ -882,6 +1042,100 @@ install_essentials() {
     setup_flatpak_core
     (( want_sober )) && install_sober
     (( want_freesm )) && install_freesm_core
+    pause
+}
+
+# ------------------------------------------------------------------------------
+# 8.1 GPU SCREEN RECORDER
+# ------------------------------------------------------------------------------
+install_gsr_core() {
+    info "=== Установка GPU Screen Recorder ==="
+    if has gpu-screen-recorder && has gpu-screen-recorder-ui; then
+        ok "GPU Screen Recorder уже установлен."
+        return 0
+    fi
+    ensure_sudo || return 1
+    pacman_busy && return 1
+
+    warn "Установка gpu-screen-recorder + gpu-screen-recorder-ui..."
+    pkg_install gpu-screen-recorder gpu-screen-recorder-ui \
+        || { err "Не удалось установить GPU Screen Recorder."; return 1; }
+    ok "GPU Screen Recorder установлен (движок + оверлей UI)."
+}
+
+install_gsr() { clear; install_gsr_core; pause; }
+
+# ------------------------------------------------------------------------------
+# 8.2 УТИЛИТЫ ДЛЯ АРХИВОВ
+# ------------------------------------------------------------------------------
+install_archive_tools_core() {
+    info "=== Установка утилит для архивов ==="
+    ensure_sudo || return 1
+    pacman_busy && return 1
+
+    warn "Устанавливаю: ${ARCHIVE_TOOLS[*]}"
+    pkg_install "${ARCHIVE_TOOLS[@]}" \
+        || { err "Часть утилит для архивов не установилась."; return 1; }
+    ok "Утилиты для архивов установлены (GUI: PeaZip; консоль: tar/zip/unzip/unrar/7zip/...)."
+}
+
+install_archive_tools() { clear; install_archive_tools_core; pause; }
+
+# ------------------------------------------------------------------------------
+# 8.3 ФАЙРВОЛ (ufw или firewalld)
+# ------------------------------------------------------------------------------
+configure_firewall() {
+    clear
+    info "=== Настройка файрвола ==="
+    echo
+    echo -e "${BOLD}Разница между ufw и firewalld:${NC}"
+    echo "  • ufw (Uncomplicated Firewall) — простой фронтенд к nftables/iptables."
+    echo "    Лёгкий и понятный, идеален для домашнего ПК и ноутбука."
+    echo "  • firewalld — динамический менеджер зон (zones) и сервисов."
+    echo "    Гибче (профили сетей, зоны), удобнее для серверов и частой смены сетей."
+    echo "  Оба фильтруют трафик одинаково. Для личной системы проще ufw."
+    echo
+
+    local fw=""
+    has ufw && fw=ufw
+    [[ -z "$fw" ]] && has firewall-cmd && fw=firewalld
+
+    if [[ -z "$fw" ]]; then
+        echo "Какой файрвол установить?"
+        echo "1) ufw (проще, рекомендую для ПК)"
+        echo "2) firewalld (зоны, для серверов)"
+        echo "3) Не устанавливать"
+        local c; read -rp "Ваш выбор [1-3]: " c
+        case "$c" in
+            2) fw=firewalld ;;
+            3) info "Пропущено."; pause; return 0 ;;
+            *) fw=ufw ;;
+        esac
+    else
+        info "Уже установлен файрвол: $fw"
+    fi
+
+    ensure_sudo || { pause; return; }
+
+    if [[ "$fw" == ufw ]]; then
+        has ufw || pkg_install ufw || { err "Не удалось установить ufw."; pause; return; }
+        info "Включаю ufw: входящие запрещены, исходящие разрешены..."
+        sudo ufw default deny incoming
+        sudo ufw default allow outgoing
+        sudo ufw --force enable
+        sudo systemctl enable --now ufw 2>/dev/null || true
+        ok "ufw включён (входящие запрещены, исходящие разрешены)."
+        sudo ufw status verbose
+    else
+        has firewall-cmd || pkg_install firewalld || { err "Не удалось установить firewalld."; pause; return; }
+        info "Включаю firewalld (зона public)..."
+        sudo systemctl enable --now firewalld
+        sudo firewall-cmd --set-default-zone=public
+        sudo firewall-cmd --permanent --zone=public --set-target=default
+        sudo firewall-cmd --reload
+        ok "firewalld включён (зона public)."
+        sudo firewall-cmd --list-all
+    fi
     pause
 }
 
@@ -1244,14 +1498,18 @@ full_setup() {
     echo "Будет выполнено:"
     echo "  1. Обновление системы"
     echo "  2. Установка AUR-хелпера (yay/paru)"
-    echo "  3. Установка dotfiles (Serpantinum)"
+    echo "  3. Установка dotfiles (Serpantinum) + раскладка us,ru"
     echo "  4. Установка Fish + плагины + конфиг"
     echo "  5. Установка Neovim + Neovide + конфиг"
     echo "  6. Установка mpv"
-    echo "  7. Flatpak + Flathub (и Sober по выбору)"
-    echo "  8. FreeSM Launcher (по выбору)"
-    echo "  9. Применение тем Serpantinum (archy)"
+    echo "  7. GPU Screen Recorder + утилиты для архивов (PeaZip)"
+    echo "  8. Flatpak + Flathub (и Sober по выбору)"
+    echo "  9. FreeSM Launcher (по выбору)"
+    echo " 10. LibreWolf (браузер)"
+    echo " 11. Файрвол (ufw / firewalld — по выбору)"
+    echo " 12. Применение тем Serpantinum (archy, авто-поиск)"
     echo
+    gpu_drivers_notice
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
 
     ensure_sudo || { pause; return; }
@@ -1275,13 +1533,21 @@ full_setup() {
     install_fish_core
     install_neovim_core
     install_mpv_core || warn "mpv не установлен."
+    install_gsr_core || warn "GPU Screen Recorder не установлен."
+    install_archive_tools_core || warn "Утилиты для архивов не установлены."
     setup_flatpak_core || warn "Flatpak не настроен."
     if confirm "Установить Sober (Roblox) через Flatpak?"; then install_sober; fi
     if confirm "Установить FreeSM Launcher (Minecraft, AUR)?"; then install_freesm_core; fi
+
+    info "Установка LibreWolf (браузер)..."
+    pkg_install librewolf-bin || warn "LibreWolf не установлен."
+
+    configure_firewall
     apply_archy_themes
 
     echo
     ok "Полная установка завершена! Рекомендуется перезагрузка."
+    gpu_drivers_notice
     serpantinum_notice
     pause
 }
@@ -1320,9 +1586,12 @@ main_menu() {
         echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
         echo -e "  ${GREEN}10)${NC} Установить mpv"
         echo -e "  ${GREEN}11)${NC} Установить FreeSM Launcher (Minecraft)"
+        echo -e "  ${GREEN}12)${NC} Установить GPU Screen Recorder"
+        echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (PeaZip и др.)"
+        echo -e "  ${GREEN}14)${NC} Настроить файрвол (ufw / firewalld)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-11]: " choice
+        read -rp "Номер пункта [0-14]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -1336,6 +1605,9 @@ main_menu() {
             9) setup_flatpak ;;
             10) install_mpv ;;
             11) install_freesm ;;
+            12) install_gsr ;;
+            13) install_archive_tools ;;
+            14) configure_firewall ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac

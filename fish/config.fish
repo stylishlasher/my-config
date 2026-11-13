@@ -6,10 +6,10 @@ if status is-interactive
     fastfetch
 end
 
-fish_add_path /home/lislash/.spicetify
+fish_add_path $HOME/.spicetify
 
 # Created by `pipx` on 2026-09-27 17:50:15
-set PATH $PATH /home/lislash/.local/bin
+set PATH $PATH $HOME/.local/bin
 
 # opencode
-fish_add_path /home/lislash/.opencode/bin
+fish_add_path $HOME/.opencode/bin
