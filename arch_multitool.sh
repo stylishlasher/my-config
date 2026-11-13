@@ -56,8 +56,8 @@ ESSENTIALS_MENU=(
     "mpv|Медиаплеер mpv|on"
     "steam|Игры Steam (нужен [multilib])|off"
 )
-# Утилиты для работы с архивами (PeaZip — GUI, остальное — консоль)
-ARCHIVE_TOOLS=(peazip tar zip unzip unrar 7zip zstd xz bzip2)
+# Утилиты для работы с архивами (Xarchiver — GUI, остальное — консоль)
+ARCHIVE_TOOLS=(xarchiver tar zip unzip unrar 7zip zstd xz bzip2)
 PACCACHE_KEEP=2
 JOURNAL_MAX="100M"
 BACKUP_DIR="$HOME"
@@ -852,6 +852,12 @@ install_fish_core() {
     warn "Установка пакета fish..."
     pac_install fish || { err "Не удалось установить fish."; return 1; }
 
+    # ffmpeg нужен для пользовательской функции converttool (конвертер/сжатие)
+    if ! has ffmpeg; then
+        warn "Установка ffmpeg (нужен для функции converttool)..."
+        pac_install ffmpeg || warn "ffmpeg не установлен — функция converttool будет недоступна."
+    fi
+
     apply_fish_config || warn "Конфиг fish не применён."
     install_fish_plugins
     set_default_shell_fish
@@ -1078,7 +1084,7 @@ install_archive_tools_core() {
     warn "Устанавливаю: ${ARCHIVE_TOOLS[*]}"
     pkg_install "${ARCHIVE_TOOLS[@]}" \
         || { err "Часть утилит для архивов не установилась."; return 1; }
-    ok "Утилиты для архивов установлены (GUI: PeaZip; консоль: tar/zip/unzip/unrar/7zip/...)."
+    ok "Утилиты для архивов установлены (GUI: Xarchiver; консоль: tar/zip/unzip/unrar/7zip/...)."
 }
 
 install_archive_tools() { clear; install_archive_tools_core; pause; }
@@ -1504,7 +1510,7 @@ full_setup() {
     echo "  4. Установка Fish + плагины + конфиг"
     echo "  5. Установка Neovim + Neovide + конфиг"
     echo "  6. Установка mpv"
-    echo "  7. GPU Screen Recorder + утилиты для архивов (PeaZip)"
+    echo "  7. GPU Screen Recorder + утилиты для архивов (Xarchiver)"
     echo "  8. Flatpak + Flathub (и Sober по выбору)"
     echo "  9. FreeSM Launcher (по выбору)"
     echo " 10. LibreWolf (браузер)"
@@ -1589,7 +1595,7 @@ main_menu() {
         echo -e "  ${GREEN}10)${NC} Установить mpv"
         echo -e "  ${GREEN}11)${NC} Установить FreeSM Launcher (Minecraft)"
         echo -e "  ${GREEN}12)${NC} Установить GPU Screen Recorder"
-        echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (PeaZip и др.)"
+        echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (Xarchiver и др.)"
         echo -e "  ${GREEN}14)${NC} Настроить файрвол (ufw / firewalld)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
