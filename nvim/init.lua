@@ -320,14 +320,14 @@ fmap("<F2>", select_theme)
 
 -- ===== Эффекты курсора (Neovide) =====
 local function set_vfx(name)
-    vim.g.neovide_cursor_vfx_mode = (name == "off") and "" or name
+    vim.g.neovide_cursor_vfx_mode = (name == "off" or prefs.profile == "classic") and "" or name
 end
 local function select_vfx()
     local modes = { "pixiedust", "railgun", "torpedo", "wireframe", "sonicboom", "ripple", "off" }
     vim.ui.select(modes, { prompt = "Выберите эффект частиц:" }, function(choice)
         if choice then
             set_vfx(choice)
-            prefs.vfx = choice
+            prefs.vfx = choice; if prefs.profile == "classic" and choice ~= "off" then prefs.profile = "fancy" end; if _G.apply_profile then _G.apply_profile() end
             save_prefs()
         end
     end)
@@ -370,7 +370,7 @@ local help_lines = {
     " Орфография    F7 вкл/выкл   F8 исправить слово ",
     " Вид           F2 / Ctrl+T тема   F4 / Ctrl+E эффект   F5 номера строк ",
     "               Ctrl+= / Ctrl+- / Ctrl+0 размер шрифта (или Ctrl+колесо) ",
-    "               F11 полный экран   F1 эта справка ",
+    "               F11 полный экран   F10 режим   F1 справка ",
 }
 local function show_help()
     vim.cmd("stopinsert")
@@ -394,21 +394,58 @@ end
 fmap("<F1>", show_help)
 
 -- ===== Neovide =====
+local function apply_profile()
+    local classic = prefs.profile == "classic"
+    if classic then
+        vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver40-blinkwait700-blinkoff400-blinkon400,r-cr-o:hor30"
+    else
+        vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20"
+    end
+    if not vim.g.neovide then return end
+    if classic then
+        vim.g.neovide_cursor_vfx_mode = ""
+        vim.g.neovide_cursor_animation_length = 0
+        vim.g.neovide_cursor_trail_size = 0
+        vim.g.neovide_cursor_smooth_blink = false
+        vim.g.neovide_cursor_animate_in_insert_mode = false
+        vim.g.neovide_cursor_animate_command_line = false
+        vim.g.neovide_scroll_animation_length = 0
+        vim.g.neovide_scroll_animation_far_lines = 0
+        vim.g.neovide_position_animation_length = 0
+        vim.g.neovide_opacity = 1.0
+    else
+        set_vfx(prefs.vfx or "pixiedust")
+        vim.g.neovide_cursor_vfx_opacity = 200.0
+        vim.g.neovide_cursor_vfx_particle_lifetime = 1.2
+        vim.g.neovide_cursor_vfx_particle_density = 10.0
+        vim.g.neovide_cursor_animation_length = 0.15
+        vim.g.neovide_cursor_trail_size = 0.8
+        vim.g.neovide_cursor_smooth_blink = true
+        vim.g.neovide_cursor_animate_in_insert_mode = true
+        vim.g.neovide_cursor_animate_command_line = true
+        vim.g.neovide_scroll_animation_length = 0.25
+        vim.g.neovide_scroll_animation_far_lines = 1
+        vim.g.neovide_position_animation_length = 0.15
+        vim.g.neovide_opacity = 0.80
+    end
+    apply_font()
+end
+_G.apply_profile = apply_profile
+
+local function toggle_profile()
+    prefs.profile = (prefs.profile == "classic") and "fancy" or "classic"
+    save_prefs()
+    apply_profile()
+    vim.notify("Режим: " .. (prefs.profile == "classic" and "классика" or "с эффектами"))
+end
+fmap("<F10>", toggle_profile)
+
 if vim.g.neovide then
-    set_vfx(prefs.vfx or "pixiedust")
-    vim.g.neovide_cursor_vfx_opacity = 200.0
-    vim.g.neovide_cursor_vfx_particle_lifetime = 1.2
-    vim.g.neovide_cursor_vfx_particle_density = 10.0
-    vim.g.neovide_cursor_animation_length = 0.15
-    vim.g.neovide_cursor_trail_size = 0.8
-    vim.g.neovide_cursor_smooth_blink = true
-    vim.g.neovide_opacity = 0.80
-    vim.g.neovide_scroll_animation_length = 0.25
     vim.g.neovide_hide_mouse_when_typing = true
     vim.g.neovide_padding_top = 6
     vim.g.neovide_padding_bottom = 6
     vim.g.neovide_padding_left = 10
     vim.g.neovide_padding_right = 10
-    apply_font()
     fmap("<F11>", function() vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen end)
 end
+apply_profile()
