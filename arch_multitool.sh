@@ -36,6 +36,9 @@ SERPANTINUM_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/serpantinum"
 THEME_DIR="$SERPANTINUM_STATE_DIR/presets"
 # Плагины fish (для fisher)
 FISH_PLUGINS=(jorgebucaran/fisher ilancosman/tide@v6)
+# Flatpak: репозиторий Flathub и Sober (Roblox на Linux)
+FLATPAK_REMOTE_URL="https://dl.flathub.org/repo/flathub.flatpakrepo"
+SOBER_APP="org.vinegarhq.Sober"
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
@@ -839,13 +842,83 @@ install_essentials() {
     [[ -n "$messenger" ]] && pkgs+=("$messenger")
 
     echo
+    local want_sober=0
+    if confirm "Установить Sober (Roblox на Linux) через Flatpak?"; then want_sober=1; fi
+
+    echo
     info "К установке: ${pkgs[*]}"
+    info "Дополнительно: Flatpak + Flathub$([[ $want_sober -eq 1 ]] && echo ' + Sober')"
     confirm "Продолжить?" || { warn "Отменено."; pause; return; }
 
     if "$helper" -S --needed "${pkgs[@]}"; then
         ok "Установка ПО завершена!"
     else
         err "Установка завершилась с ошибкой (см. вывод выше)."
+    fi
+
+    # Flatpak + Flathub ставятся автоматически, Sober — по выбору
+    setup_flatpak_core
+    (( want_sober )) && install_sober
+    pause
+}
+
+# ------------------------------------------------------------------------------
+# 9.1 FLATPAK + FLATHUB (+ SOBER / ROBLOX)
+# ------------------------------------------------------------------------------
+# Установка и базовая настройка Flatpak: сам flatpak + портал + репозиторий Flathub
+setup_flatpak_core() {
+    info "=== Установка и настройка Flatpak ==="
+    ensure_sudo || return 1
+    pacman_busy && return 1
+
+    if has flatpak; then
+        ok "Flatpak уже установлен."
+    else
+        warn "Установка flatpak и xdg-desktop-portal-gtk..."
+        pac_install flatpak xdg-desktop-portal-gtk || { err "Не удалось установить flatpak."; return 1; }
+    fi
+
+    warn "Добавляю репозиторий Flathub..."
+    if sudo flatpak remote-add --if-not-exists flathub "$FLATPAK_REMOTE_URL"; then
+        ok "Flathub готов."
+    else
+        warn "Системное добавление не удалось — пробую для пользователя."
+        if flatpak remote-add --user --if-not-exists flathub "$FLATPAK_REMOTE_URL"; then
+            ok "Flathub добавлен для пользователя."
+        else
+            err "Не удалось добавить Flathub."
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# Установка Sober (Roblox) из Flathub
+install_sober() {
+    has flatpak || { err "Flatpak не установлен — сначала выполните настройку Flatpak."; return 1; }
+    ensure_sudo || return 1
+
+    info "Установка Sober (Roblox на Linux) из Flathub..."
+    if sudo flatpak install -y --noninteractive flathub "$SOBER_APP"; then
+        ok "Sober установлен. Запуск: flatpak run $SOBER_APP"
+        return 0
+    fi
+    warn "Системная установка не удалась — пробую для пользователя."
+    if flatpak install -y --noninteractive --user flathub "$SOBER_APP"; then
+        ok "Sober установлен (для пользователя). Запуск: flatpak run $SOBER_APP"
+        return 0
+    fi
+    err "Не удалось установить Sober."
+    return 1
+}
+
+setup_flatpak() {
+    clear
+    setup_flatpak_core || { pause; return; }
+    if confirm "Установить Sober (Roblox на Linux) из Flathub?"; then
+        install_sober
+    else
+        info "Sober пропущен."
     fi
     pause
 }
@@ -1126,7 +1199,8 @@ full_setup() {
     echo "  3. Установка dotfiles (Serpantinum)"
     echo "  4. Установка Fish + плагины + конфиг"
     echo "  5. Установка Neovim + Neovide + конфиг"
-    echo "  6. Применение тем Serpantinum (archy)"
+    echo "  6. Flatpak + Flathub (и Sober по выбору)"
+    echo "  7. Применение тем Serpantinum (archy)"
     echo
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
 
@@ -1150,6 +1224,8 @@ full_setup() {
 
     install_fish_core
     install_neovim_core
+    setup_flatpak_core || warn "Flatpak не настроен."
+    if confirm "Установить Sober (Roblox) через Flatpak?"; then install_sober; fi
     apply_archy_themes
 
     echo
@@ -1189,9 +1265,10 @@ main_menu() {
         echo -e "  ${GREEN}6)${NC} Установить Neovim + Neovide + конфиг"
         echo -e "  ${GREEN}7)${NC} Применить мои конфиги (fish / nvim / темы)"
         echo -e "  ${GREEN}8)${NC} Установить основной набор ПО"
+        echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-8]: " choice
+        read -rp "Номер пункта [0-9]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -1202,6 +1279,7 @@ main_menu() {
             6) install_neovim ;;
             7) apply_all_configs ;;
             8) install_essentials ;;
+            9) setup_flatpak ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac
