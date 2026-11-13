@@ -1,0 +1,349 @@
+{
+  "name": "dracula-night",
+  "created": 1794585035312,
+  "palette": {
+    "base": "#282a36",
+    "mantle": "#21222c",
+    "crust": "#191a21",
+    "surface0": "#343746",
+    "surface1": "#44475a",
+    "surface2": "#565a72",
+    "overlay0": "#6272a4",
+    "overlay1": "#7a88b8",
+    "overlay2": "#98a3cc",
+    "text": "#f8f8f2",
+    "subtext0": "#d6d6e0",
+    "subtext1": "#e4e4ea",
+    "blue": "#8be9fd",
+    "sapphire": "#62b3d6",
+    "teal": "#5fe3c0",
+    "green": "#50fa7b",
+    "yellow": "#f1fa8c",
+    "peach": "#ffb86c",
+    "maroon": "#d9455f",
+    "red": "#ff5555",
+    "pink": "#ff79c6",
+    "mauve": "#bd93f9"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 15,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 100,
+      "opacity": 100,
+      "style": "fill",
+      "time": {
+        "format": "HH:mm:ss"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 5,
+      "groupColors": {
+        "g_kb": "#bd93f9",
+        "g_timedate": "#ff79c6",
+        "g_info": "#50fa7b"
+      },
+      "workspacesStyle": "numbers",
+      "timeStyle": "classic",
+      "timeShowDate": true,
+      "hideEmptyWorkspaces": false,
+      "visBarCount": 16,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "wave",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp"
+      ],
+      "batStyle": "text",
+      "wifiStyle": "text",
+      "btStyle": "text",
+      "kbStyle": "text",
+      "volStyle": "text",
+      "height": 34,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "duration",
+      "mediaHideWhenIdle": true,
+      "mediaShowControls": true,
+      "mediaShowIcon": true,
+      "mediaWidth": 100,
+      "modules": {
+        "left": [
+          "left",
+          "workspaces",
+          "media"
+        ],
+        "center": [
+          "timedate"
+        ],
+        "right": [
+          "sysmon",
+          "weather",
+          [
+            "kb",
+            "wifi",
+            "vol",
+            "bat"
+          ],
+          "tray"
+        ]
+      }
+    },
+    "theme": {
+      "fontFamily": "Adwaita Mono",
+      "borderRadius": 10,
+      "activePreset": "Dracula",
+      "matugen": false,
+      "colors": {
+        "base": "#282a36",
+        "mantle": "#21222c",
+        "crust": "#191a21",
+        "surface0": "#343746",
+        "surface1": "#44475a",
+        "surface2": "#565a72",
+        "overlay0": "#6272a4",
+        "overlay1": "#7a88b8",
+        "overlay2": "#98a3cc",
+        "text": "#f8f8f2",
+        "subtext0": "#d6d6e0",
+        "subtext1": "#e4e4ea",
+        "blue": "#8be9fd",
+        "sapphire": "#62b3d6",
+        "teal": "#5fe3c0",
+        "green": "#50fa7b",
+        "yellow": "#f1fa8c",
+        "peach": "#ffb86c",
+        "maroon": "#d9455f",
+        "red": "#ff5555",
+        "pink": "#ff79c6",
+        "mauve": "#bd93f9"
+      },
+      "blurBackground": true,
+      "blurStyle": "blur",
+      "elementOpacity": 85,
+      "mode": "dark"
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 150,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 450,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "bottom right",
+      "sound": true
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "left",
+      "elementSize": 38,
+      "floating": true,
+      "opacity": 100,
+      "autohide": true,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        },
+        {
+          "name": "Vesktop",
+          "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+          "desktop_id": "vesktop.desktop",
+          "icon": "vesktop"
+        },
+        {
+          "name": "Spotify",
+          "comment": "",
+          "desktop_id": "spotify",
+          "icon": "spotify-client"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": false,
+      "visibleElements": 7,
+      "exclusive": false,
+      "cascadeScale": false,
+      "onTop": true,
+      "smartAutohide": true,
+      "hoverScale": 140,
+      "showRunningApps": true
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 90,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": false,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 540,
+      "itemCount": 7,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    }
+  },
+  "widgets": {
+    "eDP-2": [
+      {
+        "type": "visualizer",
+        "wType": "visualizer",
+        "wVariant": "bars",
+        "wX": 480,
+        "wY": 1020,
+        "wWidth": 960,
+        "wHeight": 180,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_dr_vis",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "simpleLyrics",
+        "wX": 41,
+        "wY": 840,
+        "wWidth": 289,
+        "wHeight": 195,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_dr_lyrics",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "full",
+        "wX": 41,
+        "wY": 1035,
+        "wWidth": 309,
+        "wHeight": 120,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_dr_music",
+        "stretchWidth": false,
+        "stretchHeight": false,
+        "continuous": false
+      }
+    ]
+  },
+  "wallpapers": {}
+}
