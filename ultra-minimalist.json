@@ -1,0 +1,295 @@
+{
+  "general": {
+    "language": "ru",
+    "avatarPath": "/home/lislash/Загрузки/rosescross.jpg",
+    "muteSfx": false,
+    "weatherInterval": 15,
+    "weatherUnit": "metric",
+    "location": {
+      "ip": "212.28.94.109",
+      "latitude": 47.006042,
+      "longitude": 28.856675,
+      "city": "Chisinau",
+      "region": "Chisinau Municipality",
+      "region_code": "CU",
+      "country_name": "Moldova",
+      "country_code": "MD",
+      "postal": "MD-2000",
+      "timezone": "Europe/Chisinau",
+      "utc_offset": "+0300",
+      "currency": "MDL",
+      "languages": "ro,ru,gag,tr",
+      "asn": "AS15836",
+      "org": "Arax-Impex s.r.l.",
+      "source": "ipapi.co",
+      "updated_at": 1790864318
+    },
+    "sfxVolume": 100,
+    "screenshotCaptureOnRelease": false,
+    "quickactions": true,
+    "settingsSeparateWindow": false
+  },
+  "syspanel": {
+    "clipExpandProgress": 0,
+    "clipExpanded": false,
+    "clipState": 1
+  },
+  "bar": {
+    "position": "bottom",
+    "width": 50,
+    "opacity": 100,
+    "style": "solid",
+    "time": {
+      "format": "HH:mm:ss"
+    },
+    "autohide": false,
+    "autohideTimeout": 1000,
+    "modules": {
+      "left": [
+        "workspaces",
+        "left"
+      ],
+      "center": [
+        [
+          "info",
+          "timedate",
+          "media",
+          "weather"
+        ]
+      ],
+      "right": [
+        "sysmon",
+        [
+          "wifi",
+          "bat",
+          "tray"
+        ]
+      ]
+    },
+    "distinctPills": false,
+    "workspaceCount": 5,
+    "groupColors": {
+      "g_timedate": "#938aa9",
+      "g_wifi": "#d27e99",
+      "g_info": "#658594"
+    },
+    "workspacesStyle": "numbers",
+    "timeStyle": "classic",
+    "timeShowDate": true,
+    "hideEmptyWorkspaces": false,
+    "visBarCount": 16,
+    "visAlignment": "center",
+    "visContinuous": false,
+    "sysmonStyle": "circle",
+    "sysmonStats": [
+      "cpu",
+      "ram",
+      "temp"
+    ],
+    "batStyle": "text",
+    "wifiStyle": "text",
+    "btStyle": "text",
+    "kbStyle": "text",
+    "volStyle": "text",
+    "height": 37,
+    "centerByEdges": true,
+    "menuStyle": "icon",
+    "menuShowLauncher": true,
+    "workspaces": {
+      "perMonitorNumbering": false,
+      "monitors": {
+        "eDP-2": {
+          "first": 1,
+          "count": 10
+        }
+      }
+    },
+    "mediaInfoMode": "duration",
+    "mediaHideWhenIdle": true,
+    "mediaShowControls": true,
+    "mediaShowIcon": true,
+    "mediaWidth": 81,
+    "batShowPercent": true,
+    "batShowIcon": true
+  },
+  "theme": {
+    "fontFamily": "Adwaita Mono",
+    "borderRadius": 0,
+    "activePreset": "Morganite",
+    "matugen": false,
+    "colors": {
+      "base": "#1c1014",
+      "blue": "#fca3c4",
+      "crust": "#0c0608",
+      "green": "#f5c2e7",
+      "mantle": "#140b0e",
+      "maroon": "#e64553",
+      "mauve": "#fca3c4",
+      "overlay0": "#8c4f68",
+      "overlay1": "#a8627e",
+      "overlay2": "#c47896",
+      "peach": "#f38ba8",
+      "pink": "#f5b0db",
+      "red": "#e85d88",
+      "sapphire": "#f5b0db",
+      "subtext0": "#dca2ba",
+      "subtext1": "#ecc6d6",
+      "surface0": "#331a24",
+      "surface1": "#482634",
+      "surface2": "#5e3344",
+      "teal": "#94e2d5",
+      "text": "#fce8f0",
+      "yellow": "#f9e2af"
+    },
+    "blurBackground": false,
+    "blurStyle": "blur",
+    "elementOpacity": 100,
+    "mode": "dark"
+  },
+  "idle": {
+    "enabled": true,
+    "actions": {
+      "dim": {
+        "id": "dim",
+        "timeout": 150,
+        "enabled": true,
+        "respectInhibitors": true,
+        "mprisInhibit": false,
+        "command": "",
+        "resumeCommand": "",
+        "isCustom": false
+      },
+      "dpms": {
+        "id": "dpms",
+        "timeout": 450,
+        "enabled": true,
+        "respectInhibitors": true,
+        "mprisInhibit": false,
+        "command": "",
+        "resumeCommand": "",
+        "isCustom": false
+      },
+      "lock": {
+        "id": "lock",
+        "timeout": 300,
+        "enabled": true,
+        "respectInhibitors": true,
+        "mprisInhibit": false,
+        "command": "",
+        "resumeCommand": "",
+        "isCustom": false
+      },
+      "suspend": {
+        "id": "suspend",
+        "timeout": 600,
+        "enabled": true,
+        "respectInhibitors": true,
+        "mprisInhibit": false,
+        "command": "",
+        "resumeCommand": "",
+        "isCustom": false
+      }
+    },
+    "manualInhibit": false,
+    "caffeineStartTime": 0,
+    "caffeineEndTime": 0
+  },
+  "notifications": {
+    "dnd": false,
+    "position": "top left",
+    "sound": true,
+    "soundFile": "/home/lislash/.local/share/serpantinum/src/assets/sounds/notifications/Progress.wav",
+    "horizontalPosition": 12,
+    "verticalPosition": 9
+  },
+  "display": {
+    "monitors": {
+      "eDP-1": {
+        "enabled": false,
+        "scale": 1
+      },
+      "eDP-2": {
+        "enabled": false,
+        "scale": 1
+      }
+    }
+  },
+  "wallpaperDir": "/home/lislash/Pictures/Wallpapers",
+  "dock": {
+    "enabled": true,
+    "position": "right",
+    "elementSize": 36,
+    "floating": true,
+    "opacity": 100,
+    "autohide": true,
+    "autohideTimeout": 1000,
+    "editing": false,
+    "apps": [
+      {
+        "name": "Firefox",
+        "comment": "Быстрый и приватный браузер",
+        "desktop_id": "firefox",
+        "icon": "firefox"
+      },
+      {
+        "name": "Telegram",
+        "comment": "New era of messaging",
+        "desktop_id": "org.telegram.desktop",
+        "icon": "org.telegram.desktop"
+      },
+      {
+        "name": "Vesktop",
+        "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+        "desktop_id": "vesktop.desktop",
+        "icon": "vesktop"
+      },
+      {
+        "name": "Spotify",
+        "comment": "",
+        "desktop_id": "spotify",
+        "icon": "spotify-client"
+      },
+      {
+        "name": "Neovim",
+        "comment": "Редактирование текстовых файлов",
+        "desktop_id": "nvim",
+        "icon": "nvim"
+      }
+    ],
+    "overrideBoundsCorrection": false,
+    "enableScrolling": false,
+    "visibleElements": 7,
+    "exclusive": false,
+    "cascadeScale": false,
+    "onTop": true,
+    "smartAutohide": true,
+    "hoverScale": 140,
+    "showRunningApps": true
+  },
+  "osd": {
+    "horizontalPosition": 50,
+    "verticalPosition": 90,
+    "orientation": "horizontal",
+    "showCapsLock": true,
+    "showNumLock": true,
+    "showAirplane": true,
+    "attachToBar": true
+  },
+  "lockscreen": {
+    "fingerprintEnabled": true,
+    "attemptLimitEnabled": false,
+    "passwordMaxAttempts": 5,
+    "fingerprintMaxAttempts": 5,
+    "backgroundMode": "follow",
+    "customBackground": ""
+  },
+  "launcher": {
+    "position": "left",
+    "width": 350,
+    "itemCount": 8,
+    "terminalCommand": "kitty -e",
+    "smartRanking": true,
+    "searchProvider": "duckduckgo"
+  }
+}
+
