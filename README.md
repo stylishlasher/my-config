@@ -42,6 +42,11 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 > **Serpantinum → Настройки → Presets (Пресеты) → выбрать нужную тему.**
 >
 > Без этого шага цвета/оформление не изменятся.
+>
+> [!TIP]
+> Иногда тема может отобразиться с багами (частично применилась/не перерисовалась).
+> В этом случае просто **перевыберите ту же тему** в
+> **Serpantinum → Настройки → Presets (Пресеты)** — этого обычно достаточно.
 
 ---
 
@@ -128,7 +133,8 @@ my-config/
 ├── placeholders/          # скриншоты пресетов для README
 ├── glass.json             # тема Serpantinum «стекло»
 ├── archy-style.json       # тема Serpantinum «минимализм»
-└── ultra-minimalist.json  # тема Serpantinum «ультра-минимализм»
+├── ultra-minimalist.json  # тема Serpantinum «ультра-минимализм»
+└── LICENSE                # GNU AGPL-3.0
 ```
 
 > Пресеты определяются автоматически: функция `apply_archy_themes` находит **все**
@@ -174,5 +180,5 @@ curl -fsSL install.serpantinum.dev | bash
 
 ## Лицензия
 
-Скрипты и личные конфиги в этом репозитории распространяются под лицензией MIT
-(см. [LICENSE](LICENSE)). Проект Serpantinum лицензирован отдельно (AGPL-3.0).
+Этот репозиторий распространяется под лицензией **GNU AGPL-3.0** — той же, что и
+**Serpantinum** (см. [LICENSE](LICENSE)).

@@ -295,6 +295,7 @@ serpantinum_notice() {
     echo -e "${b}${bar}${n}"
     echo -e "${b}  Serpantinum  →  Настройки  →  Presets (Пресеты)  →  выбрать тему${n}"
     echo -e "${b}  Доступные темы:  ${list}${n}"
+    echo -e "${b}  Если тема отобразилась с багами — просто перевыберите её там же.${n}"
     echo -e "${b}${bar}${n}"
     echo
 }
