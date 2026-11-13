@@ -39,6 +39,8 @@ FISH_PLUGINS=(jorgebucaran/fisher ilancosman/tide@v6)
 # Flatpak: репозиторий Flathub и Sober (Roblox на Linux)
 FLATPAK_REMOTE_URL="https://dl.flathub.org/repo/flathub.flatpakrepo"
 SOBER_APP="org.vinegarhq.Sober"
+# FreeSM Launcher (Minecraft, офлайн-аккаунты) из AUR
+FREESM_PKG="freesmlauncher-bin"
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
@@ -862,8 +864,12 @@ install_essentials() {
     if confirm "Установить Sober (Roblox на Linux) через Flatpak?"; then want_sober=1; fi
 
     echo
+    local want_freesm=0
+    if confirm "Установить FreeSM Launcher (Minecraft, AUR)?"; then want_freesm=1; fi
+
+    echo
     info "К установке: ${pkgs[*]}"
-    info "Дополнительно: Flatpak + Flathub$([[ $want_sober -eq 1 ]] && echo ' + Sober')"
+    info "Дополнительно: Flatpak + Flathub$([[ $want_sober -eq 1 ]] && echo ' + Sober')$([[ $want_freesm -eq 1 ]] && echo ' + FreeSM Launcher')"
     confirm "Продолжить?" || { warn "Отменено."; pause; return; }
 
     if "$helper" -S --needed "${pkgs[@]}"; then
@@ -872,9 +878,10 @@ install_essentials() {
         err "Установка завершилась с ошибкой (см. вывод выше)."
     fi
 
-    # Flatpak + Flathub ставятся автоматически, Sober — по выбору
+    # Flatpak + Flathub ставятся автоматически, Sober и FreeSM — по выбору
     setup_flatpak_core
     (( want_sober )) && install_sober
+    (( want_freesm )) && install_freesm_core
     pause
 }
 
@@ -938,6 +945,31 @@ setup_flatpak() {
     fi
     pause
 }
+
+# ------------------------------------------------------------------------------
+# 9.2 FREESM LAUNCHER (MINECRAFT, AUR)
+# ------------------------------------------------------------------------------
+install_freesm_core() {
+    info "=== Установка FreeSM Launcher ($FREESM_PKG) ==="
+    if pacman -Qq "$FREESM_PKG" &>/dev/null; then
+        ok "FreeSM Launcher уже установлен."
+        return 0
+    fi
+
+    local helper; helper=$(aur_helper)
+    if [[ -z "$helper" ]]; then
+        err "AUR-хелпер (yay/paru) не найден. Установите его в пункте 3 меню."
+        return 1
+    fi
+    ensure_sudo || return 1
+    pacman_busy && return 1
+
+    warn "Установка FreeSM Launcher из AUR..."
+    "$helper" -S --needed "$FREESM_PKG" || { err "Не удалось установить $FREESM_PKG."; return 1; }
+    ok "FreeSM Launcher установлен."
+}
+
+install_freesm() { clear; install_freesm_core; pause; }
 
 # ------------------------------------------------------------------------------
 # 10. ОПТИМИЗАЦИЯ И ОЧИСТКА
@@ -1217,7 +1249,8 @@ full_setup() {
     echo "  5. Установка Neovim + Neovide + конфиг"
     echo "  6. Установка mpv"
     echo "  7. Flatpak + Flathub (и Sober по выбору)"
-    echo "  8. Применение тем Serpantinum (archy)"
+    echo "  8. FreeSM Launcher (по выбору)"
+    echo "  9. Применение тем Serpantinum (archy)"
     echo
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
 
@@ -1244,6 +1277,7 @@ full_setup() {
     install_mpv_core || warn "mpv не установлен."
     setup_flatpak_core || warn "Flatpak не настроен."
     if confirm "Установить Sober (Roblox) через Flatpak?"; then install_sober; fi
+    if confirm "Установить FreeSM Launcher (Minecraft, AUR)?"; then install_freesm_core; fi
     apply_archy_themes
 
     echo
@@ -1285,9 +1319,10 @@ main_menu() {
         echo -e "  ${GREEN}8)${NC} Установить основной набор ПО"
         echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
         echo -e "  ${GREEN}10)${NC} Установить mpv"
+        echo -e "  ${GREEN}11)${NC} Установить FreeSM Launcher (Minecraft)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-10]: " choice
+        read -rp "Номер пункта [0-11]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -1300,6 +1335,7 @@ main_menu() {
             8) install_essentials ;;
             9) setup_flatpak ;;
             10) install_mpv ;;
+            11) install_freesm ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac
