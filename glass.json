@@ -194,7 +194,7 @@
     "caffeineEndTime": 0
   },
   "notifications": {
-    "dnd": true,
+    "dnd": false,
     "position": "top right",
     "sound": true,
     "soundFile": "/home/lislash/.local/share/serpantinum/src/assets/sounds/notifications/Sneak.mp3"
