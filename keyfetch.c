@@ -9,6 +9,7 @@
  */
 #define _GNU_SOURCE
 #include <ctype.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
 #include <pwd.h>
@@ -374,10 +375,60 @@ static struct termios orig_tio;
 static int have_tio;
 static volatile sig_atomic_t stop_flag;
 
+static int pinned;
+
 static void restore_term(void) {
+    ssize_t r;
+    if (pinned) { /* give the scroll region back, keep the shell's cursor */
+        static const char s[] = "\0337\033[r\0338";
+        r = write(1, s, sizeof s - 1);
+        (void)r;
+        return;
+    }
     if (have_tio) tcsetattr(0, TCSANOW, &orig_tio);
-    ssize_t r = write(1, "\033[0m\033[?25h", 10);
+    r = write(1, "\033[0m\033[?25h", 10);
     (void)r;
+}
+
+/* --pin bookkeeping: one background key per terminal (pidfile keyed by tty) */
+static void pidfile_path(char *b, size_t n) {
+    const char *tn = ttyname(1);
+    char s[96] = "notty";
+    if (tn) {
+        size_t j = 0;
+        for (const char *q = tn; *q && j < sizeof s - 1; q++) s[j++] = isalnum((unsigned char)*q) ? *q : '_';
+        s[j] = 0;
+    }
+    snprintf(b, n, "/tmp/keyfetch-%d-%s.pid", (int)getuid(), s);
+}
+
+static int same_comm(int pid) { /* don't kill a recycled pid that isn't us */
+    char a[64] = "", b[64] = "", p[64];
+    snprintf(p, sizeof p, "/proc/%d/comm", pid);
+    first_line(p, a, sizeof a);
+    first_line("/proc/self/comm", b, sizeof b);
+    return a[0] && !strcmp(a, b);
+}
+
+static int alive(int pid) { /* a zombie counts as gone */
+    char p[64], l[256];
+    snprintf(p, sizeof p, "/proc/%d/stat", pid);
+    if (kill(pid, 0) != 0) return 0;
+    if (!first_line(p, l, sizeof l)) return 0;
+    char *q = strrchr(l, ')');
+    return !(q && q[1] == ' ' && q[2] == 'Z');
+}
+
+static void pin_kill_old(const char *pf) {
+    FILE *f = fopen(pf, "r");
+    if (!f) return;
+    int pid = 0;
+    if (fscanf(f, "%d", &pid) == 1 && pid > 1 && same_comm(pid)) {
+        kill(pid, SIGTERM);
+        for (int i = 0; i < 50 && alive(pid); i++) usleep(10000); /* let it reset the region */
+    }
+    fclose(f);
+    unlink(pf);
 }
 static void on_sig(int s) { (void)s; stop_flag = 1; }
 
@@ -398,6 +449,9 @@ static void usage(const char *a0) {
            "      --height <n>       render height in rows (default 16)\n"
            "      --spin <x|y|xy>    rotation axes (default y)\n"
            "      --frames <n>       stop after n frames\n"
+           "      --pin              run in the background, pinned to the top of the\n"
+           "                         screen; the shell stays usable below (clears screen)\n"
+           "      --stop             stop the pinned key of this terminal\n"
            "  -n, --no-info          only the key\n"
            "      --no-color         disable colors\n"
            "  -h, --help             this help\n", a0);
@@ -408,14 +462,15 @@ static void usage(const char *a0) {
 int main(int argc, char **argv) {
     RGB key_col = {255, 200, 40}, lab_col = key_col;
     int lab_set = 0, rainbow = 0, use_color = !getenv("NO_COLOR"), show_info = 1;
-    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1;
+    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1, pin = 0, stop_cmd = 0;
     float speed = 1.f, size = 1.f;
 
     static const struct option lo[] = {
         {"color", 1, 0, 'c'}, {"label-color", 1, 0, 't'}, {"rainbow", 0, 0, 'r'},
         {"speed", 1, 0, 's'}, {"size", 1, 0, 'z'},        {"height", 1, 0, 'H'},
         {"spin", 1, 0, 'S'},  {"frames", 1, 0, 'f'},      {"no-info", 0, 0, 'n'},
-        {"no-color", 0, 0, 'N'}, {"help", 0, 0, 'h'},     {0, 0, 0, 0}};
+        {"no-color", 0, 0, 'N'}, {"pin", 0, 0, 'P'},      {"stop", 0, 0, 'Q'},
+        {"help", 0, 0, 'h'},     {0, 0, 0, 0}};
     int o;
     while ((o = getopt_long(argc, argv, "c:t:rs:nh", lo, NULL)) != -1) {
         switch (o) {
@@ -439,19 +494,33 @@ int main(int argc, char **argv) {
         case 'f': max_frames = atoi(optarg); break;
         case 'n': show_info = 0; break;
         case 'N': use_color = 0; break;
+        case 'P': pin = 1; break;
+        case 'Q': stop_cmd = 1; break;
         default: usage(argv[0]); return o == 'h' ? 0 : 1;
         }
     }
+
+    if (stop_cmd) {
+        char pf[128];
+        pidfile_path(pf, sizeof pf);
+        pin_kill_old(pf);
+        static const char s[] = "\0337\033[r\0338";
+        if (write(1, s, sizeof s - 1) < 0) {}
+        return 0;
+    }
+    if (pin && !isatty(1)) { fprintf(stderr, "--pin needs a terminal\n"); return 1; }
 
     struct winsize ws = {0};
     ioctl(1, TIOCGWINSZ, &ws);
     int cols = ws.ws_col ? ws.ws_col : 80, rows = ws.ws_row ? ws.ws_row : 24;
     if (H > rows - 2) H = rows - 2;
+    if (pin && H > rows / 2) H = rows / 2;
     if (H < 6) H = 6;
     int W = 2 * H;
     if (W > cols) { W = cols; }
     int avail = cols - W - 3;
-    if (avail < 12) show_info = 0;
+    if (avail > 200) avail = 200;
+    int want_info = show_info;
 
     const char *ct = getenv("COLORTERM");
     truecolor = ct && (strstr(ct, "truecolor") || strstr(ct, "24bit"));
@@ -459,7 +528,7 @@ int main(int argc, char **argv) {
     if (ct && !*ct) truecolor = 0;
 
     build_key();
-    if (show_info) { build_info(); update_live(); }
+    if (want_info) { build_info(); update_live(); }
     int maxlab = 0;
     for (int i = 0; i < ninfo; i++)
         if (info[i].kind == L_FIELD && (int)strlen(info[i].label) > maxlab) maxlab = (int)strlen(info[i].label);
@@ -483,6 +552,27 @@ int main(int argc, char **argv) {
     char *out = malloc(outcap);
     if (!zb || !dif || !spc || !out) { perror("malloc"); return 1; }
 
+    if (pin) {
+        char pf[128];
+        pidfile_path(pf, sizeof pf);
+        pin_kill_old(pf);
+        /* clear, reserve H rows at the top (scroll region = the rest), cursor below */
+        char seq[64];
+        int sn = snprintf(seq, sizeof seq, "\033[2J\033[%d;%dr\033[%d;1H", H + 1, rows, H + 1);
+        if (write(1, seq, (size_t)sn) < 0) {}
+        pid_t pid = fork();
+        if (pid < 0) { perror("fork"); return 1; }
+        if (pid > 0) {
+            FILE *f = fopen(pf, "w");
+            if (f) { fprintf(f, "%d\n", (int)pid); fclose(f); }
+            _exit(0); /* shell gets its prompt back right away */
+        }
+        setsid();
+        int dn = open("/dev/null", O_RDWR);
+        if (dn >= 0) { dup2(dn, 0); dup2(dn, 2); if (dn > 2) close(dn); }
+        pinned = 1;
+    }
+
     struct sigaction sa = {0};
     sa.sa_handler = on_sig;
     sigaction(SIGINT, &sa, NULL);
@@ -496,16 +586,30 @@ int main(int argc, char **argv) {
         tcsetattr(0, TCSANOW, &t);
     }
     atexit(restore_term);
-    if (write(1, "\033[?25l", 6) < 0) {}
+    if (!pin && write(1, "\033[?25l", 6) < 0) {}
 
     const float D = 4.f;
     const float K = 0.48f * H * (D - 1.f) * size * 1.3f; /* 1.3: key is long & thin, fill the box */
     const float tilt = 0.35f;
-    double t0 = now_s(), last_info = t0;
+    double t0 = now_s(), last_info = t0, last_chk = t0;
 
     for (int frame = 0; !stop_flag; frame++) {
         double now = now_s(), t = (now - t0) * speed;
-        if (now - last_info >= 1.0 && show_info) { update_live(); last_info = now; }
+        if (now - last_info >= 1.0 && want_info) { update_live(); last_info = now; }
+        if (pin && now - last_chk >= 1.0) { /* follow terminal resizes */
+            last_chk = now;
+            struct winsize w2 = {0};
+            if (ioctl(1, TIOCGWINSZ, &w2) == 0 && w2.ws_col &&
+                (w2.ws_col != cols || w2.ws_row != rows)) {
+                cols = w2.ws_col; rows = w2.ws_row;
+                avail = cols - W - 3;
+                if (avail > 200) avail = 200;
+                char seq[64];
+                int sn = snprintf(seq, sizeof seq, "\0337\033[%d;%dr\0338", H + 1, rows);
+                if (write(1, seq, (size_t)sn) < 0) break;
+            }
+        }
+        int Wd = W < cols ? W : cols;
         if (rainbow) {
             key_col = hsv((float)(t * 50.0), 0.75f, 1.f);
             if (!lab_set) lab_col = key_col;
@@ -539,10 +643,12 @@ int main(int argc, char **argv) {
         }
 
         char *p = out;
-        if (frame > 0) p += sprintf(p, "\033[%dA\r", H);
+        if (pin) p += sprintf(p, "\0337");                      /* save cursor */
+        else if (frame > 0) p += sprintf(p, "\033[%dA\r", H);
         for (int r = 0; r < H; r++) {
             RGB last = {-1, -1, -1};
-            for (int c = 0; c < W; c++) {
+            if (pin) p += sprintf(p, "\033[%d;1H", r + 1);      /* absolute row */
+            for (int c = 0; c < Wd; c++) {
                 int i = r * W + c;
                 if (zb[i] >= 1e8f) { *p++ = ' '; continue; }
                 float sh = 0.16f + 0.84f * dif[i], sp = spc[i];
@@ -560,19 +666,20 @@ int main(int argc, char **argv) {
                 *p++ = ramp[idx];
             }
             if (use_color) p += sprintf(p, "\033[0m");
-            if (show_info) {
+            if (want_info && avail >= 12) {
                 int li = r - off;
                 if (li >= 0 && li < ninfo) {
                     p += sprintf(p, "   ");
                     p = put_info(p, &info[li], avail, lab_col, maxlab, use_color);
                 }
             }
-            p += sprintf(p, "\033[K\n");
+            p += sprintf(p, pin ? "\033[K" : "\033[K\n");
         }
+        if (pin) p += sprintf(p, "\0338");                      /* restore cursor */
         if (write(1, out, (size_t)(p - out)) < 0) break;
 
         if (max_frames && frame + 1 >= max_frames) break;
-        if (have_tio) {
+        if (have_tio && !pin) {
             char ch;
             if (read(0, &ch, 1) > 0) break;
         }
