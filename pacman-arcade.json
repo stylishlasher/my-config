@@ -1,0 +1,351 @@
+{
+  "name": "pacman-arcade",
+  "created": 1794601667176,
+  "palette": {
+    "base": "#0a0a23",
+    "mantle": "#070718",
+    "crust": "#04040f",
+    "surface0": "#14143a",
+    "surface1": "#1d1d52",
+    "surface2": "#282870",
+    "overlay0": "#4a4aa8",
+    "overlay1": "#6a6ac8",
+    "overlay2": "#8a8ae0",
+    "text": "#fff8d6",
+    "subtext0": "#e0d8a8",
+    "subtext1": "#f0e8c0",
+    "blue": "#2121de",
+    "sapphire": "#00ffff",
+    "teal": "#00ffff",
+    "green": "#39ff14",
+    "yellow": "#ffd400",
+    "peach": "#ffb852",
+    "maroon": "#b30000",
+    "red": "#ff0000",
+    "pink": "#ffb8ff",
+    "mauve": "#ffb8ff"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 15,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 100,
+      "opacity": 100,
+      "style": "solid",
+      "time": {
+        "format": "HH:mm"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 6,
+      "groupColors": {
+        "g_kb": "#2121de",
+        "g_timedate": "#ffb8ff",
+        "g_info": "#00ffff"
+      },
+      "workspacesStyle": "pacman",
+      "timeStyle": "badge",
+      "timeShowDate": true,
+      "hideEmptyWorkspaces": false,
+      "visBarCount": 16,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "bars",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp"
+      ],
+      "batStyle": "classic",
+      "wifiStyle": "button",
+      "btStyle": "text",
+      "kbStyle": "text",
+      "volStyle": "button",
+      "height": 34,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "duration",
+      "mediaHideWhenIdle": true,
+      "mediaShowControls": true,
+      "mediaShowIcon": true,
+      "mediaWidth": 100,
+      "menuItems": [
+        "launcher"
+      ],
+      "modules": {
+        "left": [
+          "left",
+          "workspaces"
+        ],
+        "center": [
+          [
+            "timedate"
+          ]
+        ],
+        "right": [
+          "media",
+          "sysmon",
+          [
+            "wifi",
+            "vol",
+            "bat"
+          ]
+        ]
+      }
+    },
+    "theme": {
+      "fontFamily": "Adwaita Mono",
+      "borderRadius": 6,
+      "activePreset": "Arcade",
+      "matugen": false,
+      "colors": {
+        "base": "#0a0a23",
+        "mantle": "#070718",
+        "crust": "#04040f",
+        "surface0": "#14143a",
+        "surface1": "#1d1d52",
+        "surface2": "#282870",
+        "overlay0": "#4a4aa8",
+        "overlay1": "#6a6ac8",
+        "overlay2": "#8a8ae0",
+        "text": "#fff8d6",
+        "subtext0": "#e0d8a8",
+        "subtext1": "#f0e8c0",
+        "blue": "#2121de",
+        "sapphire": "#00ffff",
+        "teal": "#00ffff",
+        "green": "#39ff14",
+        "yellow": "#ffd400",
+        "peach": "#ffb852",
+        "maroon": "#b30000",
+        "red": "#ff0000",
+        "pink": "#ffb8ff",
+        "mauve": "#ffb8ff"
+      },
+      "blurBackground": false,
+      "blurStyle": "blur",
+      "elementOpacity": 100,
+      "mode": "dark",
+      "apps": [
+        "cava",
+        "gtk",
+        "kitty",
+        "qt"
+      ]
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 150,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 450,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0,
+      "lockOnSleep": true
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "top right",
+      "sound": true,
+      "showEmptyGraphic": true
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "bottom",
+      "elementSize": 40,
+      "floating": true,
+      "opacity": 100,
+      "autohide": true,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        },
+        {
+          "name": "Vesktop",
+          "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+          "desktop_id": "vesktop.desktop",
+          "icon": "vesktop"
+        },
+        {
+          "name": "Spotify",
+          "comment": "",
+          "desktop_id": "spotify",
+          "icon": "spotify-client"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": false,
+      "visibleElements": 7,
+      "exclusive": false,
+      "cascadeScale": false,
+      "onTop": true,
+      "smartAutohide": true,
+      "hoverScale": 140,
+      "showRunningApps": true,
+      "focusRunning": true,
+      "showRunningIndicators": true,
+      "runningScope": "auto"
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 90,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": false,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 520,
+      "itemCount": 6,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    },
+    "widgets": {
+      "hideBarInRedactor": true
+    },
+    "inputs": {
+      "passwordReveal": true
+    }
+  },
+  "widgets": {
+    "eDP-2": [
+      {
+        "type": "time",
+        "wType": "time",
+        "wVariant": "stretched",
+        "wX": 796,
+        "wY": 340,
+        "wWidth": 328,
+        "wHeight": 260,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_pac_time",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "visualizer",
+        "wType": "visualizer",
+        "wVariant": "bars",
+        "wX": 480,
+        "wY": 1020,
+        "wWidth": 960,
+        "wHeight": 180,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_pac_vis",
+        "stretchWidth": false,
+        "stretchHeight": false
+      }
+    ]
+  },
+  "wallpapers": {}
+}

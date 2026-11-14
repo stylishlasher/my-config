@@ -1,0 +1,351 @@
+{
+  "name": "sakura-blossom",
+  "created": 1794601667176,
+  "palette": {
+    "base": "#fff5f8",
+    "mantle": "#ffeef3",
+    "crust": "#fbe3ea",
+    "surface0": "#f8dce5",
+    "surface1": "#f1cbd7",
+    "surface2": "#e8b8c8",
+    "overlay0": "#c79aab",
+    "overlay1": "#a97b8d",
+    "overlay2": "#8c6072",
+    "text": "#4a2a38",
+    "subtext0": "#6e4a5a",
+    "subtext1": "#5a3a48",
+    "blue": "#d6608c",
+    "sapphire": "#b8456f",
+    "teal": "#5fa89c",
+    "green": "#6fa86a",
+    "yellow": "#d9a441",
+    "peach": "#e8876a",
+    "maroon": "#a63a52",
+    "red": "#d63c5e",
+    "pink": "#ec7fa6",
+    "mauve": "#a86bc0"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 15,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 55,
+      "opacity": 100,
+      "style": "modular",
+      "time": {
+        "format": "HH:mm"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 5,
+      "groupColors": {
+        "g_kb": "#d6608c",
+        "g_timedate": "#a86bc0",
+        "g_info": "#b8456f"
+      },
+      "workspacesStyle": "pills",
+      "timeStyle": "material",
+      "timeShowDate": true,
+      "hideEmptyWorkspaces": false,
+      "visBarCount": 16,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "wave",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp"
+      ],
+      "batStyle": "button",
+      "wifiStyle": "button",
+      "btStyle": "text",
+      "kbStyle": "text",
+      "volStyle": "button",
+      "height": 40,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "duration",
+      "mediaHideWhenIdle": true,
+      "mediaShowControls": true,
+      "mediaShowIcon": true,
+      "mediaWidth": 100,
+      "menuItems": [
+        "launcher"
+      ],
+      "modules": {
+        "left": [
+          "left",
+          "workspaces"
+        ],
+        "center": [
+          [
+            "timedate",
+            "weather"
+          ]
+        ],
+        "right": [
+          "media",
+          [
+            "wifi",
+            "vol",
+            "bat"
+          ]
+        ]
+      }
+    },
+    "theme": {
+      "fontFamily": "Adwaita Mono",
+      "borderRadius": 24,
+      "activePreset": "Sakura",
+      "matugen": false,
+      "colors": {
+        "base": "#fff5f8",
+        "mantle": "#ffeef3",
+        "crust": "#fbe3ea",
+        "surface0": "#f8dce5",
+        "surface1": "#f1cbd7",
+        "surface2": "#e8b8c8",
+        "overlay0": "#c79aab",
+        "overlay1": "#a97b8d",
+        "overlay2": "#8c6072",
+        "text": "#4a2a38",
+        "subtext0": "#6e4a5a",
+        "subtext1": "#5a3a48",
+        "blue": "#d6608c",
+        "sapphire": "#b8456f",
+        "teal": "#5fa89c",
+        "green": "#6fa86a",
+        "yellow": "#d9a441",
+        "peach": "#e8876a",
+        "maroon": "#a63a52",
+        "red": "#d63c5e",
+        "pink": "#ec7fa6",
+        "mauve": "#a86bc0"
+      },
+      "blurBackground": false,
+      "blurStyle": "blur",
+      "elementOpacity": 92,
+      "mode": "light",
+      "apps": [
+        "cava",
+        "gtk",
+        "kitty",
+        "qt"
+      ]
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 150,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 450,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0,
+      "lockOnSleep": true
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "top center",
+      "sound": true,
+      "showEmptyGraphic": true
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "bottom",
+      "elementSize": 48,
+      "floating": true,
+      "opacity": 100,
+      "autohide": true,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        },
+        {
+          "name": "Vesktop",
+          "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+          "desktop_id": "vesktop.desktop",
+          "icon": "vesktop"
+        },
+        {
+          "name": "Spotify",
+          "comment": "",
+          "desktop_id": "spotify",
+          "icon": "spotify-client"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": false,
+      "visibleElements": 7,
+      "exclusive": false,
+      "cascadeScale": true,
+      "onTop": true,
+      "smartAutohide": true,
+      "hoverScale": 150,
+      "showRunningApps": true,
+      "focusRunning": true,
+      "showRunningIndicators": true,
+      "runningScope": "auto"
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 90,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": false,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 480,
+      "itemCount": 6,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    },
+    "widgets": {
+      "hideBarInRedactor": true
+    },
+    "inputs": {
+      "passwordReveal": true
+    }
+  },
+  "widgets": {
+    "eDP-2": [
+      {
+        "type": "time",
+        "wType": "time",
+        "wVariant": "stretched",
+        "wX": 796,
+        "wY": 340,
+        "wWidth": 328,
+        "wHeight": 260,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_sk_time",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "weather",
+        "wType": "weather",
+        "wVariant": "full",
+        "wX": 1539,
+        "wY": 995,
+        "wWidth": 340,
+        "wHeight": 160,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_sk_weather",
+        "stretchWidth": false,
+        "stretchHeight": false
+      }
+    ]
+  },
+  "wallpapers": {}
+}

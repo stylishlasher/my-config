@@ -1,0 +1,386 @@
+{
+  "name": "macos-light",
+  "created": 1794602387377,
+  "palette": {
+    "base": "#f5f5f7",
+    "mantle": "#ececee",
+    "crust": "#e0e0e4",
+    "surface0": "#e8e8ed",
+    "surface1": "#d8d8de",
+    "surface2": "#c8c8d0",
+    "overlay0": "#a0a0aa",
+    "overlay1": "#86868b",
+    "overlay2": "#6e6e73",
+    "text": "#1d1d1f",
+    "subtext0": "#515154",
+    "subtext1": "#3a3a3c",
+    "blue": "#007aff",
+    "sapphire": "#5ac8fa",
+    "teal": "#30b0c7",
+    "green": "#34c759",
+    "yellow": "#ffcc00",
+    "peach": "#ff9500",
+    "maroon": "#c93400",
+    "red": "#ff3b30",
+    "pink": "#ff2d55",
+    "mauve": "#af52de"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 15,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 100,
+      "opacity": 60,
+      "style": "fill",
+      "time": {
+        "format": "ddd d MMM  HH:mm"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 5,
+      "groupColors": {
+        "g_kb": "#007aff",
+        "g_timedate": "#007aff",
+        "g_info": "#007aff"
+      },
+      "workspacesStyle": "pills",
+      "timeStyle": "classic",
+      "timeShowDate": false,
+      "hideEmptyWorkspaces": true,
+      "visBarCount": 16,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "wave",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp"
+      ],
+      "batStyle": "classic",
+      "wifiStyle": "button",
+      "btStyle": "button",
+      "kbStyle": "button",
+      "volStyle": "button",
+      "height": 28,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "duration",
+      "mediaHideWhenIdle": true,
+      "mediaShowControls": true,
+      "mediaShowIcon": true,
+      "mediaWidth": 100,
+      "menuItems": [
+        "launcher"
+      ],
+      "modules": {
+        "left": [
+          "left"
+        ],
+        "center": [],
+        "right": [
+          "tray",
+          [
+            "kb",
+            "bt",
+            "wifi",
+            "vol",
+            "bat"
+          ],
+          "timedate"
+        ]
+      },
+      "batShowPercent": true,
+      "batShowIcon": true,
+      "wifiShowIcon": true,
+      "wifiShowName": false,
+      "btShowIcon": true,
+      "btShowName": false,
+      "volShowIcon": true,
+      "volShowPercent": false,
+      "kbShowIcon": true
+    },
+    "theme": {
+      "fontFamily": "Inter",
+      "borderRadius": 16,
+      "activePreset": "macOS Light",
+      "matugen": false,
+      "colors": {
+        "base": "#f5f5f7",
+        "mantle": "#ececee",
+        "crust": "#e0e0e4",
+        "surface0": "#e8e8ed",
+        "surface1": "#d8d8de",
+        "surface2": "#c8c8d0",
+        "overlay0": "#a0a0aa",
+        "overlay1": "#86868b",
+        "overlay2": "#6e6e73",
+        "text": "#1d1d1f",
+        "subtext0": "#515154",
+        "subtext1": "#3a3a3c",
+        "blue": "#007aff",
+        "sapphire": "#5ac8fa",
+        "teal": "#30b0c7",
+        "green": "#34c759",
+        "yellow": "#ffcc00",
+        "peach": "#ff9500",
+        "maroon": "#c93400",
+        "red": "#ff3b30",
+        "pink": "#ff2d55",
+        "mauve": "#af52de"
+      },
+      "blurBackground": true,
+      "blurStyle": "blur",
+      "elementOpacity": 60,
+      "mode": "light",
+      "apps": [
+        "cava",
+        "gtk",
+        "kitty",
+        "qt"
+      ]
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 150,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 450,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0,
+      "lockOnSleep": true
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "top right",
+      "sound": true,
+      "showEmptyGraphic": true
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "bottom",
+      "elementSize": 52,
+      "floating": true,
+      "opacity": 55,
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        },
+        {
+          "name": "Vesktop",
+          "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+          "desktop_id": "vesktop.desktop",
+          "icon": "vesktop"
+        },
+        {
+          "name": "Spotify",
+          "comment": "",
+          "desktop_id": "spotify",
+          "icon": "spotify-client"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        },
+        {
+          "name": "Files",
+          "comment": "Файловый менеджер",
+          "desktop_id": "org.gnome.Nautilus",
+          "icon": "org.gnome.Nautilus"
+        },
+        {
+          "name": "Kitty",
+          "comment": "Terminal",
+          "desktop_id": "kitty",
+          "icon": "kitty"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": false,
+      "visibleElements": 7,
+      "exclusive": false,
+      "cascadeScale": true,
+      "onTop": true,
+      "smartAutohide": false,
+      "hoverScale": 175,
+      "showRunningApps": true,
+      "runningScope": "all",
+      "focusRunning": true,
+      "showRunningIndicators": true
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 88,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": false,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 640,
+      "itemCount": 7,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    },
+    "widgets": {
+      "hideBarInRedactor": true
+    },
+    "inputs": {
+      "passwordReveal": true
+    }
+  },
+  "widgets": {
+    "eDP-2": [
+      {
+        "type": "time",
+        "wType": "time",
+        "wVariant": "stretched",
+        "wX": 41,
+        "wY": 60,
+        "wWidth": 328,
+        "wHeight": 260,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_mac_time",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "weather",
+        "wType": "weather",
+        "wVariant": "full",
+        "wX": 1539,
+        "wY": 60,
+        "wWidth": 340,
+        "wHeight": 160,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_mac_weather",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "full",
+        "wX": 1571,
+        "wY": 240,
+        "wWidth": 309,
+        "wHeight": 120,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_mac_music",
+        "stretchWidth": false,
+        "stretchHeight": false,
+        "continuous": false
+      }
+    ]
+  },
+  "wallpapers": {}
+}

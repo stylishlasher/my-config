@@ -1,0 +1,502 @@
+{
+  "name": "ultra-dashboard",
+  "created": 1794602068254,
+  "palette": {
+    "base": "#0f111a",
+    "mantle": "#0b0d14",
+    "crust": "#080a10",
+    "surface0": "#181b27",
+    "surface1": "#212536",
+    "surface2": "#2c3147",
+    "overlay0": "#565d80",
+    "overlay1": "#7078a0",
+    "overlay2": "#8f98c0",
+    "text": "#d6dcf5",
+    "subtext0": "#a9b1d6",
+    "subtext1": "#bcc4e6",
+    "blue": "#6ea8ff",
+    "sapphire": "#4fd1ff",
+    "teal": "#3ee0c2",
+    "green": "#7ee787",
+    "yellow": "#ffd166",
+    "peach": "#ff9e5e",
+    "maroon": "#c2475a",
+    "red": "#ff6b81",
+    "pink": "#ff8ad8",
+    "mauve": "#b794ff"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 10,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 96,
+      "opacity": 100,
+      "style": "modular",
+      "time": {
+        "format": "HH:mm:ss"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 9,
+      "groupColors": {
+        "g_kb": "#6ea8ff",
+        "g_timedate": "#b794ff",
+        "g_info": "#4fd1ff",
+        "g_sysmon": "#ff9e5e",
+        "g_wifi": "#3ee0c2"
+      },
+      "workspacesStyle": "pills",
+      "timeStyle": "badge",
+      "timeShowDate": true,
+      "hideEmptyWorkspaces": false,
+      "visBarCount": 24,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "circle",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp",
+        "disk"
+      ],
+      "batStyle": "classic",
+      "wifiStyle": "button",
+      "btStyle": "button",
+      "kbStyle": "button",
+      "volStyle": "button",
+      "height": 42,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "author",
+      "mediaHideWhenIdle": false,
+      "mediaShowControls": true,
+      "mediaShowIcon": true,
+      "mediaWidth": 190,
+      "menuItems": [
+        "launcher"
+      ],
+      "modules": {
+        "left": [
+          "left",
+          "workspaces",
+          "media"
+        ],
+        "center": [
+          [
+            "info",
+            "timedate",
+            "weather"
+          ]
+        ],
+        "right": [
+          "tray",
+          "sysmon",
+          [
+            "kb",
+            "wifi",
+            "bt",
+            "vol",
+            "bat"
+          ]
+        ]
+      },
+      "batShowPercent": true,
+      "batShowIcon": true,
+      "wifiShowIcon": true,
+      "wifiShowName": true,
+      "btShowIcon": true,
+      "btShowName": true,
+      "volShowIcon": true,
+      "volShowPercent": true,
+      "kbShowIcon": true
+    },
+    "theme": {
+      "fontFamily": "Adwaita Mono",
+      "borderRadius": 16,
+      "activePreset": "Ultra Dashboard",
+      "matugen": false,
+      "colors": {
+        "base": "#0f111a",
+        "mantle": "#0b0d14",
+        "crust": "#080a10",
+        "surface0": "#181b27",
+        "surface1": "#212536",
+        "surface2": "#2c3147",
+        "overlay0": "#565d80",
+        "overlay1": "#7078a0",
+        "overlay2": "#8f98c0",
+        "text": "#d6dcf5",
+        "subtext0": "#a9b1d6",
+        "subtext1": "#bcc4e6",
+        "blue": "#6ea8ff",
+        "sapphire": "#4fd1ff",
+        "teal": "#3ee0c2",
+        "green": "#7ee787",
+        "yellow": "#ffd166",
+        "peach": "#ff9e5e",
+        "maroon": "#c2475a",
+        "red": "#ff6b81",
+        "pink": "#ff8ad8",
+        "mauve": "#b794ff"
+      },
+      "blurBackground": true,
+      "blurStyle": "blur",
+      "elementOpacity": 70,
+      "mode": "dark",
+      "apps": [
+        "cava",
+        "gtk",
+        "kitty",
+        "qt"
+      ]
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 150,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 450,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0,
+      "lockOnSleep": true
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "top left",
+      "sound": true,
+      "showEmptyGraphic": true
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "bottom",
+      "elementSize": 44,
+      "floating": true,
+      "opacity": 70,
+      "autohide": true,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        },
+        {
+          "name": "Vesktop",
+          "comment": "Vesktop is a custom Discord App aiming to give you better performance and improve linux support. Vencord comes pre-installed",
+          "desktop_id": "vesktop.desktop",
+          "icon": "vesktop"
+        },
+        {
+          "name": "Spotify",
+          "comment": "",
+          "desktop_id": "spotify",
+          "icon": "spotify-client"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        },
+        {
+          "name": "Kitty",
+          "comment": "Fast, feature-rich, GPU based terminal emulator",
+          "desktop_id": "kitty",
+          "icon": "kitty"
+        },
+        {
+          "name": "Files",
+          "comment": "Файловый менеджер",
+          "desktop_id": "org.gnome.Nautilus",
+          "icon": "org.gnome.Nautilus"
+        },
+        {
+          "name": "Code",
+          "comment": "Редактор кода",
+          "desktop_id": "code",
+          "icon": "vscode"
+        },
+        {
+          "name": "OBS Studio",
+          "comment": "Запись и стриминг",
+          "desktop_id": "com.obsproject.Studio",
+          "icon": "com.obsproject.Studio"
+        },
+        {
+          "name": "Steam",
+          "comment": "Игры",
+          "desktop_id": "steam",
+          "icon": "steam"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": true,
+      "visibleElements": 9,
+      "exclusive": false,
+      "cascadeScale": true,
+      "onTop": true,
+      "smartAutohide": true,
+      "hoverScale": 170,
+      "showRunningApps": true,
+      "runningScope": "all",
+      "focusRunning": true,
+      "showRunningIndicators": true
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 90,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": true,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 720,
+      "itemCount": 12,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    },
+    "widgets": {
+      "hideBarInRedactor": true
+    },
+    "inputs": {
+      "passwordReveal": true
+    },
+    "weatherAlerts": {
+      "enabled": true,
+      "dailyForecast": true,
+      "governmentWarnings": true,
+      "quietHours": true,
+      "quietStart": 23,
+      "quietEnd": 7,
+      "rain_soon": true,
+      "snow_soon": true,
+      "heavy_rain": true,
+      "heavy_snow": true,
+      "thunderstorm": true,
+      "ice": true,
+      "fog": true,
+      "temp_rise": true,
+      "temp_drop": true,
+      "hot": true,
+      "cold": true,
+      "wind": true,
+      "uv": true,
+      "air_quality": true
+    }
+  },
+  "widgets": {
+    "eDP-2": [
+      {
+        "type": "time",
+        "wType": "time",
+        "wVariant": "stretched",
+        "wX": 796,
+        "wY": 280,
+        "wWidth": 328,
+        "wHeight": 260,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_time",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "weather",
+        "wType": "weather",
+        "wVariant": "full",
+        "wX": 1539,
+        "wY": 80,
+        "wWidth": 340,
+        "wHeight": 160,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_weather",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "simpleLyrics",
+        "wX": 41,
+        "wY": 300,
+        "wWidth": 289,
+        "wHeight": 195,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_lyrics",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "full",
+        "wX": 41,
+        "wY": 510,
+        "wWidth": 309,
+        "wHeight": 120,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_music",
+        "stretchWidth": false,
+        "stretchHeight": false,
+        "continuous": false
+      },
+      {
+        "type": "music",
+        "wType": "music",
+        "wVariant": "full",
+        "wX": 1539,
+        "wY": 1035,
+        "wWidth": 340,
+        "wHeight": 120,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_music2",
+        "stretchWidth": false,
+        "stretchHeight": false,
+        "continuous": false
+      },
+      {
+        "type": "visualizer",
+        "wType": "visualizer",
+        "wVariant": "bars",
+        "wX": 480,
+        "wY": 1020,
+        "wWidth": 960,
+        "wHeight": 180,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_vis",
+        "stretchWidth": false,
+        "stretchHeight": false
+      },
+      {
+        "type": "visualizer",
+        "wType": "visualizer",
+        "wVariant": "bars",
+        "wX": 480,
+        "wY": 80,
+        "wWidth": 960,
+        "wHeight": 120,
+        "wOpacity": 1,
+        "wRotation": 0,
+        "wImagePath": "",
+        "imagePath": "",
+        "wId": "w_ud_vis_top",
+        "stretchWidth": false,
+        "stretchHeight": false
+      }
+    ]
+  },
+  "wallpapers": {}
+}
