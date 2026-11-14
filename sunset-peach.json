@@ -151,7 +151,7 @@
         "mauve": "#d49af0"
       },
       "blurBackground": true,
-      "blurStyle": "blur",
+      "blurStyle": "liquid",
       "elementOpacity": 78,
       "mode": "dark",
       "apps": [
