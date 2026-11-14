@@ -1,4 +1,4 @@
-function fish_greeting --description 'Приветствие терминала: fastfetch / keyfetch (сверху или снизу) / ничего'
+function fish_greeting --description 'Приветствие терминала: fastfetch / keyfetch / ничего'
     # Настройки пишет установщик arch_multitool в ~/.config/arch_multitool/greeting.fish
     set -l conf $HOME/.config/arch_multitool/greeting.fish
     if test -f $conf
@@ -9,22 +9,16 @@ function fish_greeting --description 'Приветствие терминала:
     set -q greeting_color; or set -g greeting_color '#ffc828'
     set -q greeting_rainbow; or set -g greeting_rainbow 0
     set -q greeting_height; or set -g greeting_height 16
-    set -q greeting_position; or set -g greeting_position top
 
     switch $greeting_mode
         case keyfetch
-            # Вращающийся 3D-ключ закрепляется и живёт, пока открыт терминал.
-            # position=top    -> ключ вверху, промпт ниже (скроллбек теряется)
-            # position=bottom -> ключ внизу, промпт выше (скроллбек сохраняется)
+            # Вращающийся 3D-ключ закрепляется ВНИЗУ и живёт, пока открыт терминал.
+            # Шелл остаётся сверху и сохраняет обычный скроллбек.
             if functions -q keyfetch
-                set -l pin --pin
-                if test "$greeting_position" = bottom
-                    set pin --pin-bottom
-                end
                 if test "$greeting_rainbow" = 1
-                    keyfetch $pin --rainbow --height $greeting_height
+                    keyfetch --pin-bottom --rainbow --height $greeting_height
                 else
-                    keyfetch $pin -c "$greeting_color" --height $greeting_height
+                    keyfetch --pin-bottom -c "$greeting_color" --height $greeting_height
                 end
             end
         case fastfetch

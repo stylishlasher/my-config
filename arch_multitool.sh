@@ -1127,27 +1127,21 @@ install_fish_core() {
 }
 
 # --- Приветствие терминала (fastfetch / keyfetch) ----------------------------
-# Пишем fish-файл с настройками (его читают функции fish_greeting и clear).
-# $1 = mode (fastfetch|keyfetch|none), $2 = цвет, $3 = rainbow (0/1), $4 = высота,
-# $5 = position (top|bottom — где закреплён ключ keyfetch)
+# Пишем fish-файл с настройками (его читает функция fish_greeting).
+# $1 = mode (fastfetch|keyfetch|none), $2 = цвет, $3 = rainbow (0/1), $4 = высота
 write_greeting_file() {
-    local mode="${1:-fastfetch}" color="${2:-#ffc828}" rainbow="${3:-0}" height="${4:-16}" position="${5:-top}"
+    local mode="${1:-fastfetch}" color="${2:-#ffc828}" rainbow="${3:-0}" height="${4:-16}"
     mkdir -p "$GREETING_DIR"
     {
         echo "# Настройки приветствия терминала (создано arch_multitool)."
         echo "# mode: fastfetch | keyfetch | none"
-        echo "# position: top (ключ вверху) | bottom (ключ внизу, история команд сохраняется)"
+        echo "# keyfetch закрепляется внизу: шелл сверху сохраняет историю прокрутки."
         echo "set -g greeting_mode $mode"
         echo "set -g greeting_color \"$color\""
         echo "set -g greeting_rainbow $rainbow"
         echo "set -g greeting_height $height"
-        echo "set -g greeting_position $position"
     } > "$GREETING_FILE"
-    if [[ "$mode" == keyfetch ]]; then
-        ok "Приветствие: keyfetch ($position) → $GREETING_FILE"
-    else
-        ok "Приветствие: $mode → $GREETING_FILE"
-    fi
+    ok "Приветствие: $mode → $GREETING_FILE"
 }
 
 # Интерактивный выбор приветствия (fastfetch / keyfetch + цвет).
@@ -1160,17 +1154,15 @@ configure_greeting() {
 
     menu_select "Приветствие терминала" \
         "1|fastfetch — статичная информация о системе" \
-        "2|keyfetch сверху — 3D-ключ закреплён вверху, промпт ниже (скроллбек теряется)" \
-        "3|keyfetch снизу — 3D-ключ внизу, история команд и прокрутка сохраняются" \
-        "4|Ничего (пустое приветствие)" \
+        "2|keyfetch — 3D-ключ внизу, история команд и прокрутка сохраняются" \
+        "3|Ничего (пустое приветствие)" \
         "0|Оставить как есть" || return 0
 
     case "$MENU_CHOICE" in
-        1) write_greeting_file fastfetch "#ffc828" 0 16 top ;;
-        4) write_greeting_file none "#ffc828" 0 16 top ;;
-        2|3)
-            local color="#ffc828" rainbow=0 position=top
-            [[ "$MENU_CHOICE" == 3 ]] && position=bottom
+        1) write_greeting_file fastfetch "#ffc828" 0 16 ;;
+        3) write_greeting_file none "#ffc828" 0 16 ;;
+        2)
+            local color="#ffc828" rainbow=0
             # name|hex — цвета keyfetch (можно и словом, но храним hex)
             local -a cols=(
                 "gold|#ffc828" "orange|#ff8c1e" "yellow|#ffdc3c" "lime|#a0ff3c"
@@ -1205,7 +1197,7 @@ configure_greeting() {
                 color="${cols[$((MENU_CHOICE - 1))]##*|}"
             fi
 
-            write_greeting_file keyfetch "$color" "$rainbow" 16 "$position"
+            write_greeting_file keyfetch "$color" "$rainbow" 16
             info "Подсказка: keyfetch запускается сам; остановить — 'keyfetch --stop'."
             ;;
         0|"") return 0 ;;
