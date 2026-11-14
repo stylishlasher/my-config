@@ -97,16 +97,18 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 - применение личных конфигов и тем Serpantinum (`glass`, `archy-style`, `ultra-minimalist` — авто-поиск всех пресетов);
 - `flatpak` + репозиторий Flathub (автонастройка) и **Sober** (Roblox на Linux) по выбору;
 - **FreeSM Launcher** (Minecraft, AUR) по выбору;
-- **ПО по галочкам** (чек-лист): базовый набор + приложения —
-  браузеры (`firefox`, `chromium`, `librewolf`, `brave-bin`), мессенджеры
-  (`telegram-desktop`, `vesktop-bin`/Vencord, `discord`, `element-desktop`, `signal-desktop`),
-  музыка и видео (`spotify`, `vlc`, `obs-studio`), игры (`steam`, `lutris`,
-  `heroic-games-launcher-bin`, `prismlauncher`, `bottles`), прочее (`gimp`,
-  `qbittorrent`, `libreoffice-fresh`, `keepassxc`). **Всё необязательное — по выбору**,
-  `steam` по умолчанию выключен (при выборе автоматически включается репозиторий `[multilib]`);
-- **консольные приколы** (пункт 15) — выбор категории, затем галочки; всего 96 пакетов:
+- **установка ПО — вкладки** (пункт 8): базовый набор, приложения, консольные приколы,
+  кастомные фетчи, Flatpak + Sober/FreeSM, «всё по галочкам»;
+- **приложения** (вкладка, чек-лист): браузеры (`firefox`, `chromium`, `librewolf`, `brave-bin`),
+  мессенджеры (`telegram-desktop`, `vesktop-bin`/Vencord, `discord`, `element-desktop`,
+  `signal-desktop`), музыка и видео (`spotify`, `vlc`, `obs-studio`), игры (`steam`, `lutris`,
+  `heroic-games-launcher-bin`, `prismlauncher`, `bottles`), прочее (`gimp`, `qbittorrent`,
+  `libreoffice-fresh`, `keepassxc`). **Всё необязательное — по выбору**, `steam` по умолчанию
+  выключен (при выборе автоматически включается репозиторий `[multilib]`);
+- **консольные приколы** (вкладка с подпапками) — всего 118 пакетов, **все по умолчанию
+  выключены** (ставятся только по явному выбору):
   - *приколы и визуализации*: `cava`, `lavat`, `cbonsai`, `tty-clock`, `cmatrix`, `unimatrix-git`,
-    `pipes.sh`, `lolcat`, `figlet`, `toilet`, `cowsay`, `ponysay`, `fortune-mod`, `fastfetch`,
+    `pipes.sh`, `lolcat`, `figlet`, `toilet`, `cowsay`, `ponysay`, `fortune-mod`,
     `asciinema`, `chafa`, `catimg`, `viu`, `timg`, `jp2a`, `glow`, `boxes`, `bb`, `rain`,
     `terminal-parrot`, `hollywood`, `genact`, `asciiquarium`, `nyancat`, `peaclock`, `sl`,
     `aalib`, `libcaca`;
@@ -117,7 +119,15 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
   - *медиа*: `cmus`, `ncmpcpp`, `mpd`, `yt-dlp`, `aria2`, `w3m`, `lynx`, `elinks`, `browsh`,
     `neomutt`, `termusic`;
   - *CLI-утилиты*: `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `zoxide`, `jq`, `yq`, `tree`, `tmux`,
-    `zellij`, `mc`, `ranger`, `yazi`, `lf`, `nnn`, `tig`, `lazygit`, `gitui`, `calcurse`, `task`, `lsd`.
+    `zellij`, `mc`, `ranger`, `yazi`, `lf`, `nnn`, `tig`, `lazygit`, `gitui`, `calcurse`, `task`, `lsd`;
+  - *кастомные фетчи*: `fastfetch`, `uwufetch`, `hyfetch`, `macchina`, `cpufetch`, `onefetch`,
+    `neofetch`, `pfetch`, `afetch`, `nerdfetch`, `nitch`, `bunnyfetch`, `ramfetch`, `yafetch`,
+    `archfetch`, `wfetch`, `newfetch`, `rainbowfetch`, `paleofetch-git`, `gfetch-git`,
+    `fet.sh-git`, `gpufetch`, а также **`areofyl/fetch`** — анимированный 3D-фетч
+    ([github.com/areofyl/fetch](https://github.com/areofyl/fetch)): ставится из AUR
+    (`fetch-git`), а если AUR-хелпера нет — скрипт **сам скачивает и собирает** его из
+    исходников (`git clone` → `make` → `sudo make install`). Команда после установки —
+    `fetch` (например `fetch -l arch`).
 
 **Обслуживание системы (без установки):**
 - аудит и оценка системы (отчёт в файл);

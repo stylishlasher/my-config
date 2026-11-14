@@ -83,27 +83,26 @@ APPS_MENU=(
     "keepassxc|Менеджер паролей KeePassXC|off"
 )
 
-# --- Консольные «приколы» (пункт меню 15). AUR-пакеты помечены. ---
-# Всё сгруппировано по категориям; см. FUN_GROUPS ниже.
+# --- Консольные «приколы» (вкладка «Консольные приколы», пункт 8/15). AUR-пакеты помечены. ---
+# Все пункты по умолчанию ВЫКЛЮЧЕНЫ — ставятся только по явному выбору.
 
 # Приколы и визуализации
 FUN_TOOLS_MENU=(
-    "cava|Аудиовизуализатор в терминале|on"
-    "lavat|Анимация лавы в терминале (AUR)|on"
-    "cbonsai|Растущий бонсай в терминале (AUR)|on"
-    "tty-clock|Часы в терминале (AUR)|on"
-    "cmatrix|«Матрица» из символов|on"
-    "unimatrix-git|Улучшенная «Матрица» (AUR)|on"
-    "pipes.sh|Анимация труб (AUR)|on"
-    "lolcat|Радужный вывод текста|on"
-    "figlet|Большой ASCII-текст|on"
-    "toilet|Цветной ASCII-текст|on"
-    "cowsay|Говорящая корова|on"
-    "ponysay|Говорящий пони|on"
-    "fortune-mod|Случайные цитаты (для cowsay)|on"
-    "fastfetch|Информация о системе|on"
-    "asciinema|Запись терминальной сессии|on"
-    "chafa|Просмотр изображений в терминале|on"
+    "cava|Аудиовизуализатор в терминале|off"
+    "lavat|Анимация лавы в терминале (AUR)|off"
+    "cbonsai|Растущий бонсай в терминале (AUR)|off"
+    "tty-clock|Часы в терминале (AUR)|off"
+    "cmatrix|«Матрица» из символов|off"
+    "unimatrix-git|Улучшенная «Матрица» (AUR)|off"
+    "pipes.sh|Анимация труб (AUR)|off"
+    "lolcat|Радужный вывод текста|off"
+    "figlet|Большой ASCII-текст|off"
+    "toilet|Цветной ASCII-текст|off"
+    "cowsay|Говорящая корова|off"
+    "ponysay|Говорящий пони|off"
+    "fortune-mod|Случайные цитаты (для cowsay)|off"
+    "asciinema|Запись терминальной сессии|off"
+    "chafa|Просмотр изображений в терминале|off"
     "catimg|Картинки в терминале|off"
     "viu|Просмотр картинок в терминале|off"
     "timg|Картинки/видео в терминале (AUR)|off"
@@ -125,8 +124,8 @@ FUN_TOOLS_MENU=(
 
 # Консольные игры
 FUN_GAMES_MENU=(
-    "nudoku|Судоку в терминале (AUR)|on"
-    "tty-solitaire|Косынка в терминале|on"
+    "nudoku|Судоку в терминале (AUR)|off"
+    "tty-solitaire|Косынка в терминале|off"
     "bastet|Тетрис «Bastard» (AUR)|off"
     "vitetris|Тетрис в терминале (AUR)|off"
     "ninvaders|Space Invaders в терминале (AUR)|off"
@@ -144,15 +143,15 @@ FUN_GAMES_MENU=(
 
 # Мониторы и системные утилиты
 FUN_MONITOR_MENU=(
-    "bottom|Системный монитор btm|on"
-    "glances|Монитор системы Glances|on"
-    "htop|Классический htop|on"
-    "nvtop|Монитор GPU (NVIDIA/AMD/Intel)|on"
-    "ncdu|Анализ занятого места (NCurses)|on"
-    "dust|Быстрый аналог du (Rust)|on"
-    "duf|Просмотр дисков (df) таблицей|on"
-    "procs|Современный ps|on"
-    "pv|Прогресс-бар для пайпов|on"
+    "bottom|Системный монитор btm|off"
+    "glances|Монитор системы Glances|off"
+    "htop|Классический htop|off"
+    "nvtop|Монитор GPU (NVIDIA/AMD/Intel)|off"
+    "ncdu|Анализ занятого места (NCurses)|off"
+    "dust|Быстрый аналог du (Rust)|off"
+    "duf|Просмотр дисков (df) таблицей|off"
+    "procs|Современный ps|off"
+    "pv|Прогресс-бар для пайпов|off"
     "gtop|Графический монитор в терминале|off"
     "bandwhich|Сетевой трафик по процессам|off"
     "nmon|Монитор ресурсов nmon|off"
@@ -163,12 +162,12 @@ FUN_MONITOR_MENU=(
 
 # Музыка, медиа, браузеры в терминале
 FUN_MEDIA_MENU=(
-    "cmus|Музыкальный плеер в терминале|on"
-    "ncmpcpp|Клиент MPD в терминале|on"
-    "mpd|Сервер музыки MPD|on"
-    "yt-dlp|Скачивание видео/музыки (YouTube и др.)|on"
-    "aria2|Многопоточный загрузчик|on"
-    "w3m|Текстовый браузер w3m|on"
+    "cmus|Музыкальный плеер в терминале|off"
+    "ncmpcpp|Клиент MPD в терминале|off"
+    "mpd|Сервер музыки MPD|off"
+    "yt-dlp|Скачивание видео/музыки (YouTube и др.)|off"
+    "aria2|Многопоточный загрузчик|off"
+    "w3m|Текстовый браузер w3m|off"
     "lynx|Текстовый браузер Lynx|off"
     "elinks|Текстовый браузер ELinks|off"
     "browsh|Полноценный браузер в терминале (AUR)|off"
@@ -178,16 +177,16 @@ FUN_MEDIA_MENU=(
 
 # Полезные CLI-утилиты
 CLI_TOOLS_MENU=(
-    "bat|cat с подсветкой синтаксиса|on"
-    "eza|Современный ls|on"
-    "fd|Современный find|on"
-    "ripgrep|Современный grep|on"
-    "fzf|Нечёткий поиск по спискам|on"
-    "zoxide|Умный cd (команда z)|on"
-    "jq|Обработка JSON|on"
-    "yq|Обработка YAML|on"
-    "tree|Дерево каталогов|on"
-    "tmux|Мультиплексор терминала|on"
+    "bat|cat с подсветкой синтаксиса|off"
+    "eza|Современный ls|off"
+    "fd|Современный find|off"
+    "ripgrep|Современный grep|off"
+    "fzf|Нечёткий поиск по спискам|off"
+    "zoxide|Умный cd (команда z)|off"
+    "jq|Обработка JSON|off"
+    "yq|Обработка YAML|off"
+    "tree|Дерево каталогов|off"
+    "tmux|Мультиплексор терминала|off"
     "zellij|Современный мультиплексор (Rust)|off"
     "mc|Файловый менеджер Midnight Commander|off"
     "ranger|Файловый менеджер Ranger|off"
@@ -202,13 +201,34 @@ CLI_TOOLS_MENU=(
     "lsd|ls с иконками|off"
 )
 
-# Названия категорий консольных приколов (для подменю, пункт 15)
-FUN_GROUPS=(
-    "Приколы и визуализации"
-    "Консольные игры"
-    "Мониторы и системные утилиты"
-    "Музыка, медиа, браузеры в терминале"
-    "Полезные CLI-утилиты"
+# Кастомные фетчи (пункт 15, категория «Кастомные фетчи»).
+# "areofyl-fetch" — маркер: ставится из AUR (fetch-git), иначе сборкой из исходников
+# (см. install_areofyl_fetch).
+CUSTOM_SRC_FETCH="areofyl-fetch"
+CUSTOM_FETCH_MENU=(
+    "fastfetch|Быстрый и гибкий fastfetch|off"
+    "uwufetch|UwU-фетч (uwufetch)|off"
+    "hyfetch|Hyfetch (neofetch с pride-флагами)|off"
+    "macchina|Macchina — настраиваемый фетч|off"
+    "cpufetch|Фетч про CPU|off"
+    "onefetch|Фетч для git-репозиториев|off"
+    "neofetch|Классический neofetch (AUR)|off"
+    "pfetch|Минималистичный pfetch (AUR)|off"
+    "afetch|Простой afetch (AUR)|off"
+    "nerdfetch|Фетч с иконками Nerd Font (AUR)|off"
+    "nitch|Крошечный nitch (AUR)|off"
+    "bunnyfetch|Bunnyfetch (AUR)|off"
+    "ramfetch|Фетч про оперативку (AUR)|off"
+    "yafetch|Yafetch (AUR)|off"
+    "archfetch|Archfetch (AUR)|off"
+    "wfetch|Wfetch (AUR)|off"
+    "newfetch|Newfetch (AUR)|off"
+    "rainbowfetch|Rainbowfetch (AUR)|off"
+    "paleofetch-git|Paleofetch на C (AUR)|off"
+    "gfetch-git|Gfetch (AUR)|off"
+    "fet.sh-git|Фетч на чистом shell (AUR)|off"
+    "gpufetch|Фетч про GPU (AUR)|off"
+    "${CUSTOM_SRC_FETCH}|areofyl/fetch — 3D-логотип (AUR: fetch-git)|off"
 )
 
 # Утилиты для работы с архивами (Xarchiver — GUI, остальное — консоль)
@@ -341,7 +361,7 @@ select_packages() {
     local -a items=("$@")
     SELECTED_PACKAGES=()
 
-    if has whiptail; then
+    if has whiptail && [[ -t 0 && -t 1 ]]; then
         local -a args=() it pkg desc state
         for it in "${items[@]}"; do
             IFS='|' read -r pkg desc state <<< "$it"
@@ -395,6 +415,52 @@ select_packages() {
         n=$((n + 1))
     done
     return 0
+}
+
+# Меню-«вкладки»: выбор одного пункта.
+# Аргументы: заголовок, затем строки "id|описание".
+# Результат — в MENU_CHOICE; 0 при выборе, 1 при отмене.
+MENU_CHOICE=""
+menu_select() {
+    local title="$1"; shift
+    local -a items=("$@")
+    MENU_CHOICE=""
+
+    if has whiptail && [[ -t 0 && -t 1 ]]; then
+        local -a args=() it id desc
+        for it in "${items[@]}"; do
+            IFS='|' read -r id desc <<< "$it"
+            args+=("$id" "$desc")
+        done
+        local out
+        out=$(whiptail --title "$title" \
+            --menu "Стрелки — выбор, Enter — подтвердить:" \
+            22 80 14 "${args[@]}" 3>&1 1>&2 2>&3) || return 1
+        MENU_CHOICE="$out"
+        return 0
+    fi
+
+    # Текстовый режим
+    while true; do
+        clear
+        echo -e "${BOLD}${CYAN}${title}${NC}"
+        echo
+        local it id desc
+        for it in "${items[@]}"; do
+            IFS='|' read -r id desc <<< "$it"
+            printf '  %2s) %s\n' "$id" "$desc"
+        done
+        echo
+        local ans
+        read -rp "Ваш выбор (Enter/'q' — отмена): " ans
+        [[ -z "${ans//[[:space:]]/}" || "$ans" == q || "$ans" == Q ]] && return 1
+        for it in "${items[@]}"; do
+            IFS='|' read -r id desc <<< "$it"
+            [[ "$id" == "$ans" ]] && { MENU_CHOICE="$id"; return 0; }
+        done
+        warn "Нет такого пункта: $ans"
+        sleep 1
+    done
 }
 
 # Включить репозиторий [multilib] в /etc/pacman.conf (нужен для steam)
@@ -1136,8 +1202,24 @@ apply_all_configs() {
 }
 
 # ------------------------------------------------------------------------------
-# 9. УСТАНОВКА ПО (по галочкам)
+# 9. УСТАНОВКА ПО (вкладки + галочки)
 # ------------------------------------------------------------------------------
+# Установить пакеты (авто-включение [multilib] при выборе steam).
+software_install_pkgs() {
+    local -a pkgs=("$@")
+    (( ${#pkgs[@]} == 0 )) && { warn "Ничего не выбрано."; return 1; }
+
+    if printf '%s\n' "${pkgs[@]}" | grep -qx steam; then
+        enable_multilib || warn "Без [multilib] steam не установится."
+    fi
+
+    echo
+    info "К установке: ${pkgs[*]}"
+    pkg_install "${pkgs[@]}" \
+        || { err "Установка завершилась с ошибкой (см. вывод выше)."; return 1; }
+    ok "Установка ПО завершена!"
+}
+
 # Выбор пакетов чек-листами. Результат — в массиве ESSENTIALS_PKGS.
 # $1 = "all" (по умолчанию: базовый набор + приложения) | "apps" (только приложения).
 ESSENTIALS_PKGS=()
@@ -1165,77 +1247,71 @@ choose_essentials_packages() {
 # Установка выбранного ПО (без Flatpak/Sober/FreeSM — они отдельно).
 install_essentials_core() {
     choose_essentials_packages "${1:-all}" || { warn "Ничего не выбрано."; return 1; }
-
-    # Steam требует репозиторий [multilib] — включаем при необходимости
-    if printf '%s\n' "${ESSENTIALS_PKGS[@]}" | grep -qx steam; then
-        enable_multilib || warn "Без [multilib] steam не установится."
-    fi
-
-    echo
-    info "К установке: ${ESSENTIALS_PKGS[*]}"
-    pkg_install "${ESSENTIALS_PKGS[@]}" \
-        || { err "Установка завершилась с ошибкой (см. вывод выше)."; return 1; }
-    ok "Установка ПО завершена!"
+    software_install_pkgs "${ESSENTIALS_PKGS[@]}"
 }
 
-install_essentials() {
-    clear
-    info "=== Установка ПО (по выбору) ==="
-    echo
+# ------------------------------ Вкладки ПО ------------------------------------
 
-    local helper; helper=$(aur_helper)
-    if [[ -z "$helper" ]]; then
-        err "AUR-хелпер (yay/paru) не найден. Установите его в соответствующем пункте меню."
-        pause; return
-    fi
-    ensure_sudo || { pause; return; }
-    pacman_busy && { pause; return; }
-
-    install_essentials_core || { pause; return; }
-
-    echo
-    local want_sober=0 want_freesm=0
-    confirm "Установить Sober (Roblox на Linux) через Flatpak?" && want_sober=1
-    confirm "Установить FreeSM Launcher (Minecraft, AUR)?" && want_freesm=1
-
-    # Flatpak + Flathub ставятся автоматически, Sober и FreeSM — по выбору
-    setup_flatpak_core
-    (( want_sober )) && install_sober
-    (( want_freesm )) && install_freesm_core
-    pause
+# Вкладка «Базовый набор»
+software_tab_base() {
+    select_packages "Базовый набор (рекомендуется)" "${ESSENTIALS_MENU[@]}" \
+        || { warn "Отменено."; return 0; }
+    software_install_pkgs "${SELECTED_PACKAGES[@]}"
 }
 
-# ------------------------------------------------------------------------------
-# 9.1 КОНСОЛЬНЫЕ «ПРИКОЛЫ» (cava, cbonsai, tty-clock, игры, CLI-утилиты, ...)
-# ------------------------------------------------------------------------------
-# Возвращает в FUN_CATS номера выбранных категорий (1..N), либо пусто при отмене.
-FUN_CATS=()
-fun_select_category() {
-    FUN_CATS=()
-    local n=${#FUN_GROUPS[@]}
-    echo -e "${BOLD}${CYAN}Что поставить?${NC}"
-    echo
-    local i=1 g
-    for g in "${FUN_GROUPS[@]}"; do
-        printf '  %2d) %s\n' "$i" "$g"
-        i=$((i + 1))
+# Вкладка «Приложения»
+software_tab_apps() {
+    select_packages "Приложения (необязательно)" "${APPS_MENU[@]}" \
+        || { warn "Отменено."; return 0; }
+    software_install_pkgs "${SELECTED_PACKAGES[@]}"
+}
+
+# Вкладка «Всё по галочкам» (базовый набор + приложения)
+software_tab_all() {
+    install_essentials_core all
+}
+
+# Вкладка «Flatpak + Flathub (+ Sober / FreeSM)»
+software_tab_flatpak() {
+    setup_flatpak_core || warn "Flatpak не настроен."
+    confirm "Установить Sober (Roblox на Linux) через Flatpak?" && install_sober
+    confirm "Установить FreeSM Launcher (Minecraft, AUR)?" && install_freesm_core
+}
+
+# Центральное меню установки ПО (вкладки)
+install_software_menu() {
+    while true; do
+        menu_select "Установка ПО" \
+            "1|Базовый набор (рекомендуется)" \
+            "2|Приложения (браузеры, мессенджеры, игры...)" \
+            "3|Консольные приколы (визуализации, игры, фетчи, CLI...)" \
+            "4|Кастомные фетчи (fastfetch, uwufetch, areofyl/fetch...)" \
+            "5|Flatpak + Flathub (+ Sober / FreeSM)" \
+            "6|Всё по галочкам (базовый набор + приложения)" \
+            "0|Назад" || return 0
+
+        [[ "$MENU_CHOICE" == 0 ]] && return 0
+
+        [[ -z "$(aur_helper)" ]] && \
+            warn "AUR-хелпер (yay/paru) не найден — AUR-пакеты будут пропущены (пункт 3 главного меню)."
+
+        ensure_sudo || { pause; continue; }
+        pacman_busy && { pause; continue; }
+
+        case "$MENU_CHOICE" in
+            1) software_tab_base; pause ;;
+            2) software_tab_apps; pause ;;
+            3) software_tab_console ;;
+            4) software_tab_fetches; pause ;;
+            5) software_tab_flatpak; pause ;;
+            6) software_tab_all; pause ;;
+        esac
     done
-    printf '  %2d) Всё подряд (все категории)\n' "$i"
-    echo "   0) Отмена"
-    echo
-    local ans
-    read -rp "Номер [0-$i]: " ans
-    case "$ans" in
-        0|"") return 1 ;;
-        "$i") local k; for ((k = 1; k <= n; k++)); do FUN_CATS+=("$k"); done ;;
-        *)
-            [[ "$ans" =~ ^[0-9]+$ ]] && (( ans >= 1 && ans <= n )) || return 1
-            FUN_CATS=("$ans")
-            ;;
-    esac
-    return 0
 }
 
+# ------------------------------------------------------------------------------
+# 9.1 КОНСОЛЬНЫЕ «ПРИКОЛЫ» (визуализации, игры, мониторы, медиа, CLI, фетчи)
+# ------------------------------------------------------------------------------
 # Печатает строки меню для категории $1
 fun_group_items() {
     local name
@@ -1245,39 +1321,105 @@ fun_group_items() {
         3) name=FUN_MONITOR_MENU ;;
         4) name=FUN_MEDIA_MENU ;;
         5) name=CLI_TOOLS_MENU ;;
+        6) name=CUSTOM_FETCH_MENU ;;
         *) return 0 ;;
     esac
     local -n g="$name"
     (( ${#g[@]} )) && printf '%s\n' "${g[@]}"
 }
 
-install_fun_tools_core() {
-    fun_select_category || { warn "Отменено."; return 0; }
+# Установка areofyl/fetch (https://github.com/areofyl/fetch).
+# Приоритет: AUR-пакет fetch-git; если AUR-хелпера нет — сборка из исходников.
+install_areofyl_fetch() {
+    if [[ -n "$(aur_helper)" ]]; then
+        info "=== areofyl/fetch: установка из AUR (fetch-git) ==="
+        if pkg_install fetch-git; then
+            ok "areofyl/fetch установлен из AUR (fetch-git) — команда 'fetch'."
+            return 0
+        fi
+        warn "AUR-пакет fetch-git не установился — пробую собрать из исходников."
+    fi
 
+    info "=== areofyl/fetch (сборка из исходников) ==="
+    ensure_sudo || return 1
+    ensure_tools git make gcc || { err "Нужны git, make и gcc."; return 1; }
+    ensure_work_dir
+
+    local dir="$WORK_DIR/areofyl-fetch"
+    rm -rf "$dir"
+    info "Скачиваю https://github.com/areofyl/fetch ..."
+    git clone --depth 1 https://github.com/areofyl/fetch "$dir" \
+        || { err "Не удалось скачать репозиторий."; return 1; }
+
+    info "Собираю (make)..."
+    ( cd "$dir" && make ) || { err "Сборка не удалась."; return 1; }
+
+    info "Устанавливаю в /usr/local/bin (sudo make install)..."
+    ( cd "$dir" && sudo make install ) || { err "Установка не удалась."; return 1; }
+
+    if has fetch; then
+        ok "areofyl/fetch установлен: команда 'fetch' (например: fetch -l arch)."
+    else
+        warn "Собрано, но команда fetch не найдена в PATH."
+    fi
+}
+
+# Установка выбранных категорий (аргументы — номера категорий).
+software_install_console() {
     local -a items=() c
-    for c in "${FUN_CATS[@]}"; do
+    for c in "$@"; do
         mapfile -t -O "${#items[@]}" items < <(fun_group_items "$c")
     done
-    (( ${#items[@]} == 0 )) && { warn "Ничего не выбрано."; return 0; }
+    (( ${#items[@]} == 0 )) && { warn "Нет пакетов в выбранных категориях."; return 1; }
 
-    if ! select_packages "Консольные приколы" "${items[@]}"; then
-        warn "Отменено."; return 0
-    fi
+    select_packages "Консольные приколы" "${items[@]}" || { warn "Отменено."; return 0; }
     (( ${#SELECTED_PACKAGES[@]} == 0 )) && { warn "Ничего не выбрано."; return 0; }
 
-    echo
-    info "К установке: ${SELECTED_PACKAGES[*]}"
-    pkg_install "${SELECTED_PACKAGES[@]}" \
-        || { err "Часть пакетов не установилась."; return 1; }
-    ok "Консольные приколы установлены."
+    # Отделяем пакеты от того, что собирается из исходников
+    local -a pkgs=() p
+    local want_areofyl=0
+    for p in "${SELECTED_PACKAGES[@]}"; do
+        if [[ "$p" == "$CUSTOM_SRC_FETCH" ]]; then want_areofyl=1; else pkgs+=("$p"); fi
+    done
+
+    local rc=0
+    (( ${#pkgs[@]} )) && { software_install_pkgs "${pkgs[@]}" || rc=1; }
+    (( want_areofyl )) && { install_areofyl_fetch || rc=1; }
+    return $rc
 }
+
+# Вкладка «Консольные приколы»: подпапки по категориям
+software_tab_console() {
+    while true; do
+        menu_select "Консольные приколы — выберите раздел" \
+            "1|Приколы и визуализации" \
+            "2|Консольные игры" \
+            "3|Мониторы и системные утилиты" \
+            "4|Музыка, медиа, браузеры" \
+            "5|Полезные CLI-утилиты" \
+            "6|Кастомные фетчи" \
+            "7|Всё подряд (все разделы)" \
+            "0|Назад" || return 0
+
+        case "$MENU_CHOICE" in
+            0) return 0 ;;
+            7) software_install_console 1 2 3 4 5 6; pause ;;
+            [1-6]) software_install_console "$MENU_CHOICE"; pause ;;
+        esac
+    done
+}
+
+# Вкладка «Кастомные фетчи» (ярлык на раздел 6)
+software_tab_fetches() { software_install_console 6; }
+
+# Совместимость: используется в полной установке (пункт 1)
+install_fun_tools_core() { software_tab_console; }
 
 install_fun_tools() {
     clear
-    info "=== Консольные приколы и визуализации ==="
+    info "=== Консольные приколы ==="
     echo
-    install_fun_tools_core
-    pause
+    software_tab_console
 }
 
 # ------------------------------------------------------------------------------
@@ -1741,7 +1883,7 @@ full_setup() {
     echo "  8. Flatpak + Flathub (и Sober по выбору)"
     echo "  9. FreeSM Launcher (по выбору)"
     echo " 10. Необязательное ПО — по галочкам (браузеры, мессенджеры, игры...)"
-    echo " 11. Консольные приколы — по галочкам (игры, визуализации, CLI...)"
+    echo " 11. Консольные приколы — по галочкам (игры, фетчи, визуализации, CLI...)"
     echo " 12. Файрвол (ufw / firewalld — по выбору)"
     echo " 13. Применение тем Serpantinum (archy, авто-поиск)"
     echo
@@ -1827,14 +1969,14 @@ main_menu() {
         echo -e "  ${GREEN}5)${NC} Установить Fish + плагины + конфиг"
         echo -e "  ${GREEN}6)${NC} Установить Neovim + Neovide + конфиг"
         echo -e "  ${GREEN}7)${NC} Применить мои конфиги (fish / nvim / темы)"
-        echo -e "  ${GREEN}8)${NC} Установить ПО — по галочкам (браузеры, мессенджеры, игры...)"
+        echo -e "  ${GREEN}8)${NC} Установить ПО (вкладки: базовое / приложения / приколы / фетчи)"
         echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
         echo -e "  ${GREEN}10)${NC} Установить mpv"
         echo -e "  ${GREEN}11)${NC} Установить FreeSM Launcher (Minecraft)"
         echo -e "  ${GREEN}12)${NC} Установить GPU Screen Recorder"
         echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (Xarchiver и др.)"
         echo -e "  ${GREEN}14)${NC} Настроить файрвол (ufw / firewalld)"
-        echo -e "  ${GREEN}15)${NC} Установить консольные приколы (игры, визуализации, CLI...)"
+        echo -e "  ${GREEN}15)${NC} Установить консольные приколы (игры, фетчи, визуализации, CLI...)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
         read -rp "Номер пункта [0-15]: " choice
@@ -1847,7 +1989,7 @@ main_menu() {
             5) install_fish ;;
             6) install_neovim ;;
             7) apply_all_configs ;;
-            8) install_essentials ;;
+            8) install_software_menu ;;
             9) setup_flatpak ;;
             10) install_mpv ;;
             11) install_freesm ;;
