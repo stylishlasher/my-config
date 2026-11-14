@@ -45,17 +45,172 @@ FREESM_PKG="freesmlauncher-bin"
 
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
-# Основной набор ПО: ставится по галочкам (см. select_packages).
-# В скобках — описание для меню. Обязательные по умолчанию помечены "on".
+
+# --- ПО, выбираемое галочками (см. select_packages) ---
+# Формат строки: "пакет|описание|on|off"  ("on" — отмечено по умолчанию).
+#
+# Базовый набор: системные утилиты, которые обычно нужны всем.
 ESSENTIALS_MENU=(
-    "telegram-desktop|Мессенджер Telegram|on"
     "gpu-screen-recorder|Запись экрана GPU (движок)|on"
     "gpu-screen-recorder-ui|Запись экрана GPU (оверлей UI)|on"
-    "spotify|Музыка Spotify|on"
     "btop|Системный монитор btop|on"
     "mpv|Медиаплеер mpv|on"
-    "steam|Игры Steam (нужен [multilib])|off"
 )
+
+# Приложения: всё необязательное — браузеры, мессенджеры, игры и т.д.
+APPS_MENU=(
+    "firefox|Браузер Firefox|on"
+    "chromium|Браузер Chromium|off"
+    "librewolf|Браузер LibreWolf (приватный)|off"
+    "brave-bin|Браузер Brave (AUR)|off"
+    "telegram-desktop|Мессенджер Telegram|on"
+    "vesktop-bin|Discord + Vencord (AUR)|on"
+    "discord|Клиент Discord (официальный)|off"
+    "element-desktop|Matrix-клиент Element|off"
+    "signal-desktop|Мессенджер Signal|off"
+    "thunderbird|Почта Thunderbird|off"
+    "spotify|Музыка Spotify (AUR)|on"
+    "vlc|Медиаплеер VLC|off"
+    "obs-studio|Запись/стриминг OBS Studio|off"
+    "gimp|Редактор изображений GIMP|off"
+    "qbittorrent|Торрент-клиент qBittorrent|off"
+    "steam|Игры Steam (нужен [multilib])|off"
+    "lutris|Запуск игр Lutris|off"
+    "heroic-games-launcher-bin|Epic/GOG Heroic Launcher (AUR)|off"
+    "prismlauncher|Minecraft Prism Launcher|off"
+    "bottles|Запуск Windows-программ Bottles (AUR)|off"
+    "libreoffice-fresh|Офисный пакет LibreOffice|off"
+    "keepassxc|Менеджер паролей KeePassXC|off"
+)
+
+# --- Консольные «приколы» (пункт меню 15). AUR-пакеты помечены. ---
+# Всё сгруппировано по категориям; см. FUN_GROUPS ниже.
+
+# Приколы и визуализации
+FUN_TOOLS_MENU=(
+    "cava|Аудиовизуализатор в терминале|on"
+    "lavat|Анимация лавы в терминале (AUR)|on"
+    "cbonsai|Растущий бонсай в терминале (AUR)|on"
+    "tty-clock|Часы в терминале (AUR)|on"
+    "cmatrix|«Матрица» из символов|on"
+    "unimatrix-git|Улучшенная «Матрица» (AUR)|on"
+    "pipes.sh|Анимация труб (AUR)|on"
+    "lolcat|Радужный вывод текста|on"
+    "figlet|Большой ASCII-текст|on"
+    "toilet|Цветной ASCII-текст|on"
+    "cowsay|Говорящая корова|on"
+    "ponysay|Говорящий пони|on"
+    "fortune-mod|Случайные цитаты (для cowsay)|on"
+    "fastfetch|Информация о системе|on"
+    "asciinema|Запись терминальной сессии|on"
+    "chafa|Просмотр изображений в терминале|on"
+    "catimg|Картинки в терминале|off"
+    "viu|Просмотр картинок в терминале|off"
+    "timg|Картинки/видео в терминале (AUR)|off"
+    "jp2a|JPEG/PNG в ASCII|off"
+    "glow|Чтение Markdown в терминале|off"
+    "boxes|Рамки вокруг текста (AUR)|off"
+    "bb|ASCII-анимация (AUR)|off"
+    "rain|Дождь из символов (AUR)|off"
+    "terminal-parrot|Попугай в терминале (AUR)|off"
+    "hollywood|«Хакерский» экран (AUR)|off"
+    "genact|Фейковая бурная деятельность|off"
+    "asciiquarium|Аквариум в терминале|off"
+    "nyancat|Nyan Cat|off"
+    "peaclock|Часы-помодоро в терминале (AUR)|off"
+    "sl|Паровозик (набери sl вместо ls)|off"
+    "aalib|ASCII-арт библиотека (aafire)|off"
+    "libcaca|Цветной ASCII-арт (cacafire)|off"
+)
+
+# Консольные игры
+FUN_GAMES_MENU=(
+    "nudoku|Судоку в терминале (AUR)|on"
+    "tty-solitaire|Косынка в терминале|on"
+    "bastet|Тетрис «Bastard» (AUR)|off"
+    "vitetris|Тетрис в терминале (AUR)|off"
+    "ninvaders|Space Invaders в терминале (AUR)|off"
+    "moon-buggy|Луноход (AUR)|off"
+    "greed|Игра «Жадность» (AUR)|off"
+    "myman|Пакман в терминале (AUR)|off"
+    "pacman4console|Ещё один пакман (AUR)|off"
+    "gnugo|Го (GNU Go)|off"
+    "gnuchess|Шахматы (GNU Chess)|off"
+    "nethack|Roguelike NetHack|off"
+    "crawl|Roguelike Dungeon Crawl Stone Soup (AUR)|off"
+    "angband|Roguelike Angband|off"
+    "cataclysm-dda|Roguelike Cataclysm: DDA|off"
+)
+
+# Мониторы и системные утилиты
+FUN_MONITOR_MENU=(
+    "bottom|Системный монитор btm|on"
+    "glances|Монитор системы Glances|on"
+    "htop|Классический htop|on"
+    "nvtop|Монитор GPU (NVIDIA/AMD/Intel)|on"
+    "ncdu|Анализ занятого места (NCurses)|on"
+    "dust|Быстрый аналог du (Rust)|on"
+    "duf|Просмотр дисков (df) таблицей|on"
+    "procs|Современный ps|on"
+    "pv|Прогресс-бар для пайпов|on"
+    "gtop|Графический монитор в терминале|off"
+    "bandwhich|Сетевой трафик по процессам|off"
+    "nmon|Монитор ресурсов nmon|off"
+    "iftop|Сетевой трафик по соединениям|off"
+    "nethogs|Сетевой трафик по процессам|off"
+    "ttyplot|График значений из stdin (AUR)|off"
+)
+
+# Музыка, медиа, браузеры в терминале
+FUN_MEDIA_MENU=(
+    "cmus|Музыкальный плеер в терминале|on"
+    "ncmpcpp|Клиент MPD в терминале|on"
+    "mpd|Сервер музыки MPD|on"
+    "yt-dlp|Скачивание видео/музыки (YouTube и др.)|on"
+    "aria2|Многопоточный загрузчик|on"
+    "w3m|Текстовый браузер w3m|on"
+    "lynx|Текстовый браузер Lynx|off"
+    "elinks|Текстовый браузер ELinks|off"
+    "browsh|Полноценный браузер в терминале (AUR)|off"
+    "neomutt|Почтовый клиент в терминале|off"
+    "termusic|Музыкальный плеер (Rust)|off"
+)
+
+# Полезные CLI-утилиты
+CLI_TOOLS_MENU=(
+    "bat|cat с подсветкой синтаксиса|on"
+    "eza|Современный ls|on"
+    "fd|Современный find|on"
+    "ripgrep|Современный grep|on"
+    "fzf|Нечёткий поиск по спискам|on"
+    "zoxide|Умный cd (команда z)|on"
+    "jq|Обработка JSON|on"
+    "yq|Обработка YAML|on"
+    "tree|Дерево каталогов|on"
+    "tmux|Мультиплексор терминала|on"
+    "zellij|Современный мультиплексор (Rust)|off"
+    "mc|Файловый менеджер Midnight Commander|off"
+    "ranger|Файловый менеджер Ranger|off"
+    "yazi|Файловый менеджер Yazi (Rust)|off"
+    "lf|Файловый менеджер lf|off"
+    "nnn|Файловый менеджер nnn|off"
+    "tig|Просмотр git в терминале|off"
+    "lazygit|TUI для git|off"
+    "gitui|TUI для git (Rust)|off"
+    "calcurse|Календарь и задачи|off"
+    "task|Менеджер задач Taskwarrior|off"
+    "lsd|ls с иконками|off"
+)
+
+# Названия категорий консольных приколов (для подменю, пункт 15)
+FUN_GROUPS=(
+    "Приколы и визуализации"
+    "Консольные игры"
+    "Мониторы и системные утилиты"
+    "Музыка, медиа, браузеры в терминале"
+    "Полезные CLI-утилиты"
+)
+
 # Утилиты для работы с архивами (Xarchiver — GUI, остальное — консоль)
 ARCHIVE_TOOLS=(xarchiver tar zip unzip unrar 7zip zstd xz bzip2)
 PACCACHE_KEEP=2
@@ -157,9 +312,23 @@ pkg_install() {
     local helper; helper=$(aur_helper)
     if [[ -n "$helper" ]]; then
         "$helper" -S --needed --noconfirm "$@"
-    else
-        pac_install "$@"
+        return
     fi
+
+    # AUR-хелпера нет: pacman умеет ставить только официальные пакеты.
+    # Если синхробазы нет — просто пробуем как есть.
+    if [[ ! -e /var/lib/pacman/sync/core.db ]]; then
+        pac_install "$@"
+        return
+    fi
+
+    local -a repo=() aur=() p
+    for p in "$@"; do
+        if pacman -Si "$p" &>/dev/null; then repo+=("$p"); else aur+=("$p"); fi
+    done
+    (( ${#aur[@]} )) && warn "Нет AUR-хелпера (yay/paru) — пропускаю: ${aur[*]}"
+    (( ${#repo[@]} == 0 )) && { err "Нечего устанавливать из официальных репозиториев."; return 1; }
+    pac_install "${repo[@]}"
 }
 
 # Выбор пакетов галочками.
@@ -967,11 +1136,51 @@ apply_all_configs() {
 }
 
 # ------------------------------------------------------------------------------
-# 9. ОСНОВНОЙ НАБОР ПО
+# 9. УСТАНОВКА ПО (по галочкам)
 # ------------------------------------------------------------------------------
+# Выбор пакетов чек-листами. Результат — в массиве ESSENTIALS_PKGS.
+# $1 = "all" (по умолчанию: базовый набор + приложения) | "apps" (только приложения).
+ESSENTIALS_PKGS=()
+choose_essentials_packages() {
+    local mode="${1:-all}"
+    ESSENTIALS_PKGS=()
+
+    if [[ "$mode" == all ]]; then
+        if select_packages "Базовый набор (рекомендуется)" "${ESSENTIALS_MENU[@]}"; then
+            ESSENTIALS_PKGS+=("${SELECTED_PACKAGES[@]}")
+        else
+            warn "Базовый набор пропущен."
+        fi
+    fi
+
+    if select_packages "Приложения (необязательно)" "${APPS_MENU[@]}"; then
+        ESSENTIALS_PKGS+=("${SELECTED_PACKAGES[@]}")
+    else
+        warn "Приложения пропущены."
+    fi
+
+    (( ${#ESSENTIALS_PKGS[@]} > 0 ))
+}
+
+# Установка выбранного ПО (без Flatpak/Sober/FreeSM — они отдельно).
+install_essentials_core() {
+    choose_essentials_packages "${1:-all}" || { warn "Ничего не выбрано."; return 1; }
+
+    # Steam требует репозиторий [multilib] — включаем при необходимости
+    if printf '%s\n' "${ESSENTIALS_PKGS[@]}" | grep -qx steam; then
+        enable_multilib || warn "Без [multilib] steam не установится."
+    fi
+
+    echo
+    info "К установке: ${ESSENTIALS_PKGS[*]}"
+    pkg_install "${ESSENTIALS_PKGS[@]}" \
+        || { err "Установка завершилась с ошибкой (см. вывод выше)."; return 1; }
+    ok "Установка ПО завершена!"
+}
+
 install_essentials() {
     clear
-    info "=== Установка основного набора ПО ==="
+    info "=== Установка ПО (по выбору) ==="
     echo
 
     local helper; helper=$(aur_helper)
@@ -982,74 +1191,92 @@ install_essentials() {
     ensure_sudo || { pause; return; }
     pacman_busy && { pause; return; }
 
-    # Галочки: что именно поставить. steam — по умолчанию снят.
-    if ! select_packages "Что установить?" "${ESSENTIALS_MENU[@]}"; then
-        warn "Отменено."; pause; return
-    fi
-    if (( ${#SELECTED_PACKAGES[@]} == 0 )); then
-        warn "Ничего не выбрано."; pause; return
-    fi
-
-    # Steam требует репозиторий [multilib] — включаем при необходимости
-    if printf '%s\n' "${SELECTED_PACKAGES[@]}" | grep -qx steam; then
-        enable_multilib || warn "Без [multilib] steam не установится."
-    fi
-
-    local -a pkgs=("${SELECTED_PACKAGES[@]}")
+    install_essentials_core || { pause; return; }
 
     echo
-    echo -e "${YELLOW}Выберите браузер:${NC}"
-    echo "1) Firefox"
-    echo "2) Chromium"
-    echo "3) LibreWolf (AUR)"
-    echo "4) Не устанавливать"
-    local br browser
-    read -rp "Ваш выбор [1-4]: " br
-    case "$br" in
-        2) browser="chromium" ;;
-        3) browser="librewolf-bin" ;;
-        4) browser="" ;;
-        *) browser="firefox" ;;
-    esac
-    [[ -n "$browser" ]] && pkgs+=("$browser")
-
-    echo
-    echo -e "${YELLOW}Выберите клиент Discord:${NC}"
-    echo "1) Discord (официальный)"
-    echo "2) Vencord (Vesktop с предустановленным Vencord, AUR)"
-    echo "3) Не устанавливать"
-    local ms messenger
-    read -rp "Ваш выбор [1-3]: " ms
-    case "$ms" in
-        2) messenger="vesktop-bin" ;;
-        3) messenger="" ;;
-        *) messenger="discord" ;;
-    esac
-    [[ -n "$messenger" ]] && pkgs+=("$messenger")
-
-    echo
-    local want_sober=0
-    if confirm "Установить Sober (Roblox на Linux) через Flatpak?"; then want_sober=1; fi
-
-    echo
-    local want_freesm=0
-    if confirm "Установить FreeSM Launcher (Minecraft, AUR)?"; then want_freesm=1; fi
-
-    echo
-    info "К установке: ${pkgs[*]}"
-    info "Дополнительно: Flatpak + Flathub$([[ $want_sober -eq 1 ]] && echo ' + Sober')$([[ $want_freesm -eq 1 ]] && echo ' + FreeSM Launcher')"
-    confirm "Продолжить?" || { warn "Отменено."; pause; return; }
-
-    if "$helper" -S --needed "${pkgs[@]}"; then
-        ok "Установка ПО завершена!"
-    else
-        err "Установка завершилась с ошибкой (см. вывод выше)."
-    fi
+    local want_sober=0 want_freesm=0
+    confirm "Установить Sober (Roblox на Linux) через Flatpak?" && want_sober=1
+    confirm "Установить FreeSM Launcher (Minecraft, AUR)?" && want_freesm=1
 
     # Flatpak + Flathub ставятся автоматически, Sober и FreeSM — по выбору
     setup_flatpak_core
     (( want_sober )) && install_sober
     (( want_freesm )) && install_freesm_core
+    pause
+}
+
+# ------------------------------------------------------------------------------
+# 9.1 КОНСОЛЬНЫЕ «ПРИКОЛЫ» (cava, cbonsai, tty-clock, игры, CLI-утилиты, ...)
+# ------------------------------------------------------------------------------
+# Возвращает в FUN_CATS номера выбранных категорий (1..N), либо пусто при отмене.
+FUN_CATS=()
+fun_select_category() {
+    FUN_CATS=()
+    local n=${#FUN_GROUPS[@]}
+    echo -e "${BOLD}${CYAN}Что поставить?${NC}"
+    echo
+    local i=1 g
+    for g in "${FUN_GROUPS[@]}"; do
+        printf '  %2d) %s\n' "$i" "$g"
+        i=$((i + 1))
+    done
+    printf '  %2d) Всё подряд (все категории)\n' "$i"
+    echo "   0) Отмена"
+    echo
+    local ans
+    read -rp "Номер [0-$i]: " ans
+    case "$ans" in
+        0|"") return 1 ;;
+        "$i") local k; for ((k = 1; k <= n; k++)); do FUN_CATS+=("$k"); done ;;
+        *)
+            [[ "$ans" =~ ^[0-9]+$ ]] && (( ans >= 1 && ans <= n )) || return 1
+            FUN_CATS=("$ans")
+            ;;
+    esac
+    return 0
+}
+
+# Печатает строки меню для категории $1
+fun_group_items() {
+    local name
+    case "$1" in
+        1) name=FUN_TOOLS_MENU ;;
+        2) name=FUN_GAMES_MENU ;;
+        3) name=FUN_MONITOR_MENU ;;
+        4) name=FUN_MEDIA_MENU ;;
+        5) name=CLI_TOOLS_MENU ;;
+        *) return 0 ;;
+    esac
+    local -n g="$name"
+    (( ${#g[@]} )) && printf '%s\n' "${g[@]}"
+}
+
+install_fun_tools_core() {
+    fun_select_category || { warn "Отменено."; return 0; }
+
+    local -a items=() c
+    for c in "${FUN_CATS[@]}"; do
+        mapfile -t -O "${#items[@]}" items < <(fun_group_items "$c")
+    done
+    (( ${#items[@]} == 0 )) && { warn "Ничего не выбрано."; return 0; }
+
+    if ! select_packages "Консольные приколы" "${items[@]}"; then
+        warn "Отменено."; return 0
+    fi
+    (( ${#SELECTED_PACKAGES[@]} == 0 )) && { warn "Ничего не выбрано."; return 0; }
+
+    echo
+    info "К установке: ${SELECTED_PACKAGES[*]}"
+    pkg_install "${SELECTED_PACKAGES[@]}" \
+        || { err "Часть пакетов не установилась."; return 1; }
+    ok "Консольные приколы установлены."
+}
+
+install_fun_tools() {
+    clear
+    info "=== Консольные приколы и визуализации ==="
+    echo
+    install_fun_tools_core
     pause
 }
 
@@ -1148,7 +1375,7 @@ configure_firewall() {
 }
 
 # ------------------------------------------------------------------------------
-# 9.1 FLATPAK + FLATHUB (+ SOBER / ROBLOX)
+# 9.2 FLATPAK + FLATHUB (+ SOBER / ROBLOX)
 # ------------------------------------------------------------------------------
 # Установка и базовая настройка Flatpak: сам flatpak + портал + репозиторий Flathub
 setup_flatpak_core() {
@@ -1209,7 +1436,7 @@ setup_flatpak() {
 }
 
 # ------------------------------------------------------------------------------
-# 9.2 FREESM LAUNCHER (MINECRAFT, AUR)
+# 9.3 FREESM LAUNCHER (MINECRAFT, AUR)
 # ------------------------------------------------------------------------------
 install_freesm_core() {
     info "=== Установка FreeSM Launcher ($FREESM_PKG) ==="
@@ -1513,9 +1740,10 @@ full_setup() {
     echo "  7. GPU Screen Recorder + утилиты для архивов (Xarchiver)"
     echo "  8. Flatpak + Flathub (и Sober по выбору)"
     echo "  9. FreeSM Launcher (по выбору)"
-    echo " 10. LibreWolf (браузер)"
-    echo " 11. Файрвол (ufw / firewalld — по выбору)"
-    echo " 12. Применение тем Serpantinum (archy, авто-поиск)"
+    echo " 10. Необязательное ПО — по галочкам (браузеры, мессенджеры, игры...)"
+    echo " 11. Консольные приколы — по галочкам (игры, визуализации, CLI...)"
+    echo " 12. Файрвол (ufw / firewalld — по выбору)"
+    echo " 13. Применение тем Serpantinum (archy, авто-поиск)"
     echo
     gpu_drivers_notice
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
@@ -1547,8 +1775,17 @@ full_setup() {
     if confirm "Установить Sober (Roblox) через Flatpak?"; then install_sober; fi
     if confirm "Установить FreeSM Launcher (Minecraft, AUR)?"; then install_freesm_core; fi
 
-    info "Установка LibreWolf (браузер)..."
-    pkg_install librewolf-bin || warn "LibreWolf не установлен."
+    # Необязательное ПО — по галочкам (браузеры, мессенджеры, игры и т.д.)
+    echo
+    if confirm "Выбрать необязательное ПО (браузеры, мессенджеры, игры)?"; then
+        install_essentials_core apps || warn "Дополнительное ПО не установлено."
+    fi
+
+    # Консольные «приколы» — тоже по галочкам
+    echo
+    if confirm "Выбрать консольные приколы (cava, cbonsai, tty-clock, ...)?"; then
+        install_fun_tools_core || warn "Консольные приколы не установлены."
+    fi
 
     configure_firewall
     apply_archy_themes
@@ -1590,16 +1827,17 @@ main_menu() {
         echo -e "  ${GREEN}5)${NC} Установить Fish + плагины + конфиг"
         echo -e "  ${GREEN}6)${NC} Установить Neovim + Neovide + конфиг"
         echo -e "  ${GREEN}7)${NC} Применить мои конфиги (fish / nvim / темы)"
-        echo -e "  ${GREEN}8)${NC} Установить основной набор ПО"
+        echo -e "  ${GREEN}8)${NC} Установить ПО — по галочкам (браузеры, мессенджеры, игры...)"
         echo -e "  ${GREEN}9)${NC} Установить Flatpak + Flathub (+ Sober)"
         echo -e "  ${GREEN}10)${NC} Установить mpv"
         echo -e "  ${GREEN}11)${NC} Установить FreeSM Launcher (Minecraft)"
         echo -e "  ${GREEN}12)${NC} Установить GPU Screen Recorder"
         echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (Xarchiver и др.)"
         echo -e "  ${GREEN}14)${NC} Настроить файрвол (ufw / firewalld)"
+        echo -e "  ${GREEN}15)${NC} Установить консольные приколы (игры, визуализации, CLI...)"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-14]: " choice
+        read -rp "Номер пункта [0-15]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -1616,6 +1854,7 @@ main_menu() {
             12) install_gsr ;;
             13) install_archive_tools ;;
             14) configure_firewall ;;
+            15) install_fun_tools ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac
