@@ -15,7 +15,7 @@
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash
 ```
 
-Полная установка без меню (AUR-хелпер → dotfiles → fish → neovim/neovide → mpv → GSR → архивы → Flatpak → LibreWolf → файрвол → темы):
+Полная установка без меню (AUR-хелпер → dotfiles → fish → neovim/neovide → mpv → GSR → архивы → Flatpak → ПО по галочкам → файрвол → темы):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash -s -- -f
@@ -92,13 +92,32 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 - `neovim` + `neovide` с применением конфига и Nerd Font;
 - `mpv` (медиаплеер) — ставится автоматически;
 - **GPU Screen Recorder** (`gpu-screen-recorder` + UI-оверлей);
-- утилиты для архивов: **PeaZip** (GUI) и консольные (`tar`, `zip`, `unzip`, `unrar`, `7zip`, ...);
+- утилиты для архивов: **Xarchiver** (GUI для 7z/zip/tar) и консольные (`tar`, `zip`, `unzip`, `unrar`, `7zip`, ...);
 - **файрвол** — автонастройка `ufw` или `firewalld` (с объяснением разницы);
 - применение личных конфигов и тем Serpantinum (`glass`, `archy-style`, `ultra-minimalist` — авто-поиск всех пресетов);
 - `flatpak` + репозиторий Flathub (автонастройка) и **Sober** (Roblox на Linux) по выбору;
 - **FreeSM Launcher** (Minecraft, AUR) по выбору;
-- основной набор ПО с выбором галочками; браузер: Firefox / Chromium / **LibreWolf**;
-  клиент Discord: Discord / Vencord; **steam** — по желанию (по умолчанию выключен).
+- **ПО по галочкам** (чек-лист): базовый набор + приложения —
+  браузеры (`firefox`, `chromium`, `librewolf`, `brave-bin`), мессенджеры
+  (`telegram-desktop`, `vesktop-bin`/Vencord, `discord`, `element-desktop`, `signal-desktop`),
+  музыка и видео (`spotify`, `vlc`, `obs-studio`), игры (`steam`, `lutris`,
+  `heroic-games-launcher-bin`, `prismlauncher`, `bottles`), прочее (`gimp`,
+  `qbittorrent`, `libreoffice-fresh`, `keepassxc`). **Всё необязательное — по выбору**,
+  `steam` по умолчанию выключен (при выборе автоматически включается репозиторий `[multilib]`);
+- **консольные приколы** (пункт 15) — выбор категории, затем галочки; всего 96 пакетов:
+  - *приколы и визуализации*: `cava`, `lavat`, `cbonsai`, `tty-clock`, `cmatrix`, `unimatrix-git`,
+    `pipes.sh`, `lolcat`, `figlet`, `toilet`, `cowsay`, `ponysay`, `fortune-mod`, `fastfetch`,
+    `asciinema`, `chafa`, `catimg`, `viu`, `timg`, `jp2a`, `glow`, `boxes`, `bb`, `rain`,
+    `terminal-parrot`, `hollywood`, `genact`, `asciiquarium`, `nyancat`, `peaclock`, `sl`,
+    `aalib`, `libcaca`;
+  - *игры*: `nudoku`, `tty-solitaire`, `bastet`, `vitetris`, `ninvaders`, `moon-buggy`, `greed`,
+    `myman`, `pacman4console`, `gnugo`, `gnuchess`, `nethack`, `crawl`, `angband`, `cataclysm-dda`;
+  - *мониторы*: `bottom`, `glances`, `htop`, `nvtop`, `ncdu`, `dust`, `duf`, `procs`, `pv`,
+    `gtop`, `bandwhich`, `nmon`, `iftop`, `nethogs`, `ttyplot`;
+  - *медиа*: `cmus`, `ncmpcpp`, `mpd`, `yt-dlp`, `aria2`, `w3m`, `lynx`, `elinks`, `browsh`,
+    `neomutt`, `termusic`;
+  - *CLI-утилиты*: `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `zoxide`, `jq`, `yq`, `tree`, `tmux`,
+    `zellij`, `mc`, `ranger`, `yazi`, `lf`, `nnn`, `tig`, `lazygit`, `gitui`, `calcurse`, `task`, `lsd`.
 
 **Обслуживание системы (без установки):**
 - аудит и оценка системы (отчёт в файл);
