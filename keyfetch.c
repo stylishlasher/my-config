@@ -9,6 +9,7 @@
  */
 #define _GNU_SOURCE
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
@@ -78,6 +79,91 @@ static char *put_color(char *p, RGB c) {
 }
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+/* ------------------------------------------------------------------ */
+/* render grid (re-sizable, so the key survives terminal resizes)      */
+/* ------------------------------------------------------------------ */
+
+static int gH = 0, gW = 0;   /* current grid dimensions */
+static float *zb, *dif, *spc;
+static char *out;
+static size_t outcap;
+static char *obuf = NULL;     /* pre-rendered frame (raw cells, no cursor moves) */
+static size_t obuf_len = 0, obuf_cap = 0;
+
+/* (Re)allocate the render grid for an Hc x Wc box. 0 on success. */
+static int grid_reserve(int Hc, int Wc) {
+    if (zb && Hc == gH && Wc == gW) return 0;
+    size_t cells = (size_t)Hc * (size_t)Wc;
+    float *nzb  = malloc(sizeof(float) * cells);
+    float *ndif = malloc(sizeof(float) * cells);
+    float *nspc = malloc(sizeof(float) * cells);
+    size_t cap = cells * 24 + (size_t)Hc * 2048 + 64;
+    char *nout = malloc(cap);
+    if (!nzb || !ndif || !nspc || !nout) {
+        free(nzb); free(ndif); free(nspc); free(nout);
+        return -1;
+    }
+    free(zb); free(dif); free(spc); free(out);
+    zb = nzb; dif = ndif; spc = nspc; out = nout; outcap = cap;
+    gH = Hc; gW = Wc;
+    return 0;
+}
+
+/* Work out the key box for a terminal of `rows` x `cols`.
+   Always leaves at least one row for the shell, so the scroll region the
+   shell lives in can never collapse onto (or under) the key. */
+static void compute_layout(int Hdes, int rows, int cols, int pinned, int *Hc, int *Wc, int *avail) {
+    int h = Hdes;
+    if (h > rows - 2) h = rows - 2;
+    if (pinned && h > rows / 2) h = rows / 2;
+    if (h < 6) h = 6;
+    if (pinned && h > rows - 1) h = rows - 1;   /* never eat the whole screen */
+    if (h < 1) h = 1;
+    int w = 2 * h;
+    if (w > cols) w = cols;
+    if (w < 1) w = 1;
+    *Hc = h; *Wc = w;
+    int av = cols - w - 3;
+    if (av > 200) av = 200;
+    *avail = av;
+}
+
+/* write() that retries short writes (a signal can interrupt a big write). */
+static int write_all(int fd, const char *b, size_t n) {
+    size_t off = 0;
+    while (off < n) {
+        ssize_t w = write(fd, b + off, n - off);
+        if (w < 0) { if (errno == EINTR) continue; return -1; }
+        if (w == 0) break;
+        off += (size_t)w;
+    }
+    return 0;
+}
+
+/* Repaint a single text row (no newline) with small, cursor-safe writes.
+   Every write is wrapped in save/restore so the shell cursor can never be
+   left stranded inside the key, even if the kernel splits the stream while
+   the shell is flooding the tty. */
+static int repaint_row(int bottom, int row_abs, int Hc, const char *s, size_t len) {
+    size_t cap = len + 32;
+    char *buf = malloc(cap);
+    if (!buf) return -1;
+    size_t n = 0;
+    for (size_t off = 0; off < len; off += 512) {
+        size_t ch = len - off > 512 ? 512 : len - off;
+        if (bottom) n += (size_t)sprintf(buf + n, "\0337\033[%d;1H", row_abs);
+        else        n += (size_t)sprintf(buf + n, "\033[%dA\r", Hc);
+        memmove(buf + n, s + off, ch);
+        n += ch;
+        n += (size_t)sprintf(buf + n, "\033[K");
+        if (bottom) n += (size_t)sprintf(buf + n, "\0338");
+        else        n += (size_t)sprintf(buf + n, "\r");
+    }
+    int rc = write_all(1, buf, n);
+    free(buf);
+    return rc;
+}
 
 /* ------------------------------------------------------------------ */
 /* the key: a point cloud with normals                                 */
@@ -430,6 +516,37 @@ static void pin_kill_old(const char *pf) {
     fclose(f);
     unlink(pf);
 }
+/* ---- full-screen app detection (pinned mode) --------------------------
+ * A background process can't see which escape sequences other programs
+ * send, but it can see two things that give a full-screen (TUI) program away:
+ *   1. the foreground process group of the tty is not the shell's own
+ *      (read from /proc/<shell>/stat: pgrp vs tpgid) -> a job is running;
+ *   2. that job put the tty into raw mode (ICANON off) -> nvim, htop, mc,
+ *      less, tmux, ssh ... all do, ordinary commands (ls, make) don't.
+ * The job's process group becomes foreground BEFORE it is exec'ed, so we see
+ * it before the program can draw anything. */
+static int shell_pid; /* session leader = the interactive shell owning this tty */
+
+static int proc_pgrp_tpgid(int pid, int *pgrp, int *tpgid) {
+    char p[64], l[512];
+    snprintf(p, sizeof p, "/proc/%d/stat", pid);
+    if (!first_line(p, l, sizeof l)) return -1;
+    char *q = strrchr(l, ')'); /* comm may contain spaces/parens */
+    if (!q) return -1;
+    char st;
+    int ppid, pg, sid, tty, tp;
+    if (sscanf(q + 1, " %c %d %d %d %d %d", &st, &ppid, &pg, &sid, &tty, &tp) != 6) return -1;
+    if (st == 'Z' || st == 'X') return -1; /* shell is gone */
+    *pgrp = pg;
+    *tpgid = tp;
+    return 0;
+}
+
+static int tty_raw(void) {
+    struct termios t;
+    return tcgetattr(1, &t) == 0 && !(t.c_lflag & ICANON);
+}
+
 static void on_sig(int s) { (void)s; stop_flag = 1; }
 
 static double now_s(void) {
@@ -455,6 +572,8 @@ static void usage(const char *a0) {
            "      --pin-bottom       like --pin, but the key sits at the BOTTOM; the shell\n"
            "                         above keeps its normal scrollback (long output stays\n"
            "                         scrollable)\n"
+           "      --force-pin        keep --pin/--pin-bottom even on the bare Linux console\n"
+           "                         (by default a single static frame is shown there)\n"
            "      --stop             stop the pinned key of this terminal\n"
            "  -n, --no-info          only the key\n"
            "      --no-color         disable colors\n"
@@ -466,14 +585,14 @@ static void usage(const char *a0) {
 int main(int argc, char **argv) {
     RGB key_col = {255, 200, 40}, lab_col = key_col;
     int lab_set = 0, rainbow = 0, use_color = !getenv("NO_COLOR"), show_info = 1;
-    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1, pin = 0, pin_bottom = 0, stop_cmd = 0;
+    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1, pin = 0, pin_bottom = 0, stop_cmd = 0, force_pin = 0;
     float speed = 1.f, size = 1.f;
 
     static const struct option lo[] = {
         {"color", 1, 0, 'c'}, {"label-color", 1, 0, 't'}, {"rainbow", 0, 0, 'r'},
         {"speed", 1, 0, 's'}, {"size", 1, 0, 'z'},        {"height", 1, 0, 'H'},
         {"spin", 1, 0, 'S'},  {"frames", 1, 0, 'f'},      {"no-info", 0, 0, 'n'},
-        {"no-color", 0, 0, 'N'}, {"pin", 0, 0, 'P'},      {"pin-bottom", 0, 0, 'B'}, {"stop", 0, 0, 'Q'},
+        {"no-color", 0, 0, 'N'}, {"pin", 0, 0, 'P'},      {"pin-bottom", 0, 0, 'B'}, {"stop", 0, 0, 'Q'}, {"force-pin", 0, 0, 'F'},
         {"help", 0, 0, 'h'},     {0, 0, 0, 0}};
     int o;
     while ((o = getopt_long(argc, argv, "c:t:rs:nh", lo, NULL)) != -1) {
@@ -501,6 +620,7 @@ int main(int argc, char **argv) {
         case 'P': pin = 1; break;
         case 'B': pin = 1; pin_bottom = 1; break;
         case 'Q': stop_cmd = 1; break;
+        case 'F': force_pin = 1; break;
         default: usage(argv[0]); return o == 'h' ? 0 : 1;
         }
     }
@@ -514,18 +634,24 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (pin && !isatty(1)) { fprintf(stderr, "--pin needs a terminal\n"); return 1; }
+    {   /* Bare Linux console (TERM=linux, Ctrl+Alt+F<n>): no usable scrollback, slow
+         * framebuffer redraw, no alt-screen cooperation -> don't pin, show one static frame. */
+        const char *tm = getenv("TERM");
+        if (pin && !force_pin && tm && !strcmp(tm, "linux")) {
+            pin = 0;
+            pin_bottom = 0;
+            if (!max_frames) max_frames = 1;
+        }
+    }
 
     struct winsize ws = {0};
     ioctl(1, TIOCGWINSZ, &ws);
     int cols = ws.ws_col ? ws.ws_col : 80, rows = ws.ws_row ? ws.ws_row : 24;
-    if (H > rows - 2) H = rows - 2;
-    if (pin && H > rows / 2) H = rows / 2;
-    if (H < 6) H = 6;
-    int W = 2 * H;
-    if (W > cols) { W = cols; }
-    int avail = cols - W - 3;
-    if (avail > 200) avail = 200;
+    int Hc, Wc, avail;
+    compute_layout(H, rows, cols, pin, &Hc, &Wc, &avail);
+    if (grid_reserve(Hc, Wc) != 0) { perror("malloc"); return 1; }
     int want_info = show_info;
+    int track = 0; /* can we watch the shell's foreground job? (Linux /proc) */
 
     const char *ct = getenv("COLORTERM");
     truecolor = ct && (strstr(ct, "truecolor") || strstr(ct, "24bit"));
@@ -537,7 +663,7 @@ int main(int argc, char **argv) {
     int maxlab = 0;
     for (int i = 0; i < ninfo; i++)
         if (info[i].kind == L_FIELD && (int)strlen(info[i].label) > maxlab) maxlab = (int)strlen(info[i].label);
-    int off = ninfo < H ? (H - ninfo) / 2 : 0;
+    int off = ninfo < Hc ? (Hc - ninfo) / 2 : 0;
 
     /* lighting: top-left, in camera space (camera looks along +z) */
     float L[3] = {-0.45f, 0.65f, -0.75f};
@@ -550,25 +676,19 @@ int main(int argc, char **argv) {
     const char *ramp = " .,-~:;=!*#$@";
     int nramp = (int)strlen(ramp);
 
-    float *zb = malloc(sizeof(float) * H * W);
-    float *dif = malloc(sizeof(float) * H * W);
-    float *spc = malloc(sizeof(float) * H * W);
-    size_t outcap = (size_t)H * ((size_t)W * 24 + 2048) + 64;
-    char *out = malloc(outcap);
-    if (!zb || !dif || !spc || !out) { perror("malloc"); return 1; }
-
     if (pin) {
         char pf[128];
         pidfile_path(pf, sizeof pf);
         pin_kill_old(pf);
-        /* clear, reserve H rows (top or bottom); the rest is the shell's scroll region */
+        /* clear, reserve Hc rows (top or bottom); the rest is the shell's scroll region */
         char seq[64];
         int sn;
         if (pin_bottom) /* region = top part of the screen (starts at row 1 -> scrollback works) */
-            sn = snprintf(seq, sizeof seq, "\033[2J\033[1;%dr\033[H", rows - H);
+            sn = snprintf(seq, sizeof seq, "\033[2J\033[1;%dr\033[H", rows - Hc);
         else
-            sn = snprintf(seq, sizeof seq, "\033[2J\033[%d;%dr\033[%d;1H", H + 1, rows, H + 1);
+            sn = snprintf(seq, sizeof seq, "\033[2J\033[%d;%dr\033[%d;1H", Hc + 1, rows, Hc + 1);
         if (write(1, seq, (size_t)sn) < 0) {}
+        shell_pid = (int)getsid(0); /* before fork/setsid: the shell that owns this tty */
         pid_t pid = fork();
         if (pid < 0) { perror("fork"); return 1; }
         if (pid > 0) {
@@ -580,6 +700,10 @@ int main(int argc, char **argv) {
         int dn = open("/dev/null", O_RDWR);
         if (dn >= 0) { dup2(dn, 0); dup2(dn, 2); if (dn > 2) close(dn); }
         pinned = 1;
+        {
+            int pg, tp;
+            track = shell_pid > 1 && proc_pgrp_tpgid(shell_pid, &pg, &tp) == 0;
+        }
     }
 
     struct sigaction sa = {0};
@@ -598,40 +722,73 @@ int main(int argc, char **argv) {
     if (!pin && write(1, "\033[?25l", 6) < 0) {}
 
     const float D = 4.f;
-    const float K = 0.48f * H * (D - 1.f) * size * 1.3f; /* 1.3: key is long & thin, fill the box */
+    float Kc = 0.48f * Hc * (D - 1.f) * size * 1.3f; /* 1.3: key is long & thin, fill the box */
     const float tilt = 0.35f;
-    double t0 = now_s(), last_info = t0, last_chk = t0;
+    const size_t piece_max = 2048;   /* (unused now; rows are capped in repaint_row) */
+    size_t row_len = 0;
+    const int reps = 4;              /* repaints per rendered frame (~8 ms apart) */
+    const int sub_us = 8000;         /* pacing between repaints (us) */
+    (void)piece_max; (void)row_len;
+    double t0 = now_s(), last_info = t0, fg_since = 0;
+    const double GRACE = 0.5;  /* a job younger than this is never drawn over (ls, git status ...) */
+    int tui = 0, hidden = 0, relayout = 0;
 
     for (int frame = 0; !stop_flag; frame++) {
         double now = now_s(), t = (now - t0) * speed;
         if (now - last_info >= 1.0 && want_info) { update_live(); last_info = now; }
-        if (pin && now - last_chk >= 1.0) { /* follow terminal resizes */
-            last_chk = now;
-            struct winsize w2 = {0};
-            if (ioctl(1, TIOCGWINSZ, &w2) == 0 && w2.ws_col &&
-                (w2.ws_col != cols || w2.ws_row != rows)) {
-                int old_rows = rows;
-                cols = w2.ws_col; rows = w2.ws_row;
-                avail = cols - W - 3;
-                if (avail > 200) avail = 200;
-                char seq[512];
-                int sn = 0;
-                if (pin_bottom) { /* wipe the old footer, move the region */
-                    sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\0337");
-                    for (int r = 0; r < H; r++) {
-                        int row = old_rows - H + 1 + r;
-                        if (row >= 1 && row <= rows && sn < 400)
-                            sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\033[%d;1H\033[2K", row);
-                    }
-                    sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\033[1;%dr\0338", rows - H);
-                } else {
-                    sn = snprintf(seq, sizeof seq, "\0337\033[%d;%dr\0338", H + 1, rows);
+
+        if (pin && track) {
+            int pg, tp;
+            if (proc_pgrp_tpgid(shell_pid, &pg, &tp) < 0) break;  /* shell exited -> we exit too */
+            if (tp > 0 && tp != pg) {                             /* a foreground job is running */
+                if (fg_since == 0) fg_since = now;
+                if (!tui && tty_raw()) tui = 1;                   /* full-screen app */
+                if (tui && !hidden) {                             /* give it the whole screen */
+                    static const char rs[] = "\0337\033[r\0338";
+                    if (write_all(1, rs, sizeof rs - 1) < 0) break;
+                    hidden = 1;
                 }
-                if (write(1, seq, (size_t)sn) < 0) break;
+                if (tui || now - fg_since < GRACE) { usleep(20000); continue; } /* don't draw */
+            } else {                                              /* back at the prompt */
+                fg_since = 0;
+                tui = 0;
+                if (hidden) { hidden = 0; relayout = 1; }
             }
         }
-        int Wd = W < cols ? W : cols;
-        int yoff = pin_bottom ? rows - H : 0;
+        if (relayout) {                                           /* app is gone: re-pin the region */
+            char seq[64];
+            int sn = pin_bottom ? snprintf(seq, sizeof seq, "\0337\033[1;%dr\0338", rows - Hc)
+                                : snprintf(seq, sizeof seq, "\0337\033[%d;%dr\0338", Hc + 1, rows);
+            if (write_all(1, seq, (size_t)sn) < 0) break;
+            relayout = 0;
+        }
+        if (pin) { /* follow terminal resizes every frame -> overlap window ~= one frame */
+            struct winsize w2 = {0};
+            if (ioctl(1, TIOCGWINSZ, &w2) == 0 && w2.ws_col && w2.ws_row &&
+                (w2.ws_col != cols || w2.ws_row != rows)) {
+                int old_rows = rows, old_Hc = Hc;
+                cols = w2.ws_col; rows = w2.ws_row;
+                compute_layout(H, rows, cols, pin, &Hc, &Wc, &avail);
+                if (grid_reserve(Hc, Wc) != 0) break;
+                Kc = 0.48f * Hc * (D - 1.f) * size * 1.3f;
+                off = ninfo < Hc ? (Hc - ninfo) / 2 : 0;
+                /* wipe every row that was, or is about to become, footer */
+                int top = rows - Hc + 1, old_top = old_rows - old_Hc + 1;
+                int from = top < old_top ? top : old_top;
+                if (from < 1) from = 1;
+                char *seq = malloc((size_t)(rows - from + 1) * 16 + 32);
+                if (seq) {
+                    int sn = 0;
+                    sn += sprintf(seq + sn, "\0337");
+                    for (int row = from; row <= rows; row++)
+                        sn += sprintf(seq + sn, "\033[%d;1H\033[2K", row);
+                    sn += sprintf(seq + sn, "\033[1;%dr\0338", rows - Hc);
+                    write_all(1, seq, (size_t)sn);
+                    free(seq);
+                }
+            }
+        }
+        int Wd = Wc < cols ? Wc : cols;
         if (rainbow) {
             key_col = hsv((float)(t * 50.0), 0.75f, 1.f);
             if (!lab_set) lab_col = key_col;
@@ -641,7 +798,7 @@ int main(int argc, char **argv) {
         float ax = tilt + (spin_x ? (float)t * 0.9f : 0.f);
         float cy_ = cosf(ay), sy_ = sinf(ay), cx_ = cosf(ax), sx_ = sinf(ax);
 
-        for (int i = 0; i < H * W; i++) zb[i] = 1e9f;
+        for (int i = 0; i < Hc * Wc; i++) zb[i] = 1e9f;
 
         for (int i = 0; i < npts; i++) {
             const Pt *q = &pts[i];
@@ -652,10 +809,10 @@ int main(int argc, char **argv) {
             float x1 = q->x * cy_ + q->z * sy_, z1 = -q->x * sy_ + q->z * cy_;
             float y2 = q->y * cx_ - z1 * sx_, z2 = q->y * sx_ + z1 * cx_;
             float depth = D + z2;
-            int ix = (int)floorf(W / 2.f + 2.f * K * x1 / depth);
-            int iy = (int)floorf(H / 2.f - K * y2 / depth);
-            if (ix < 0 || ix >= W || iy < 0 || iy >= H) continue;
-            int c = iy * W + ix;
+            int ix = (int)floorf(Wc / 2.f + 2.f * Kc * x1 / depth);
+            int iy = (int)floorf(Hc / 2.f - Kc * y2 / depth);
+            if (ix < 0 || ix >= Wc || iy < 0 || iy >= Hc) continue;
+            int c = iy * Wc + ix;
             if (depth >= zb[c]) continue;
             zb[c] = depth;
             float d = nx1 * L[0] + ny2 * L[1] + nz2 * L[2];
@@ -664,15 +821,20 @@ int main(int argc, char **argv) {
             spc[c] = (d > 0 && s > 0) ? powf(s, 28.f) : 0;
         }
 
-        char *p = out;
-        if (pin) p += sprintf(p, "\0337");                      /* save cursor */
-        else if (frame > 0) p += sprintf(p, "\033[%dA\r", H);
-        for (int r = 0; r < H; r++) {
+        /* Render this frame once into obuf (raw cells, SGR + ramp, no cursor
+           moves), so we can repaint the identical picture many times cheaply. */
+        size_t want = (size_t)Hc * ((size_t)Wd * 20 + 520) + 64;
+        if (want > obuf_cap) {
+            char *n = realloc(obuf, want);
+            if (!n) break;
+            obuf = n; obuf_cap = want;
+        }
+        char *op = obuf;
+        for (int r = 0; r < Hc; r++) {
             RGB last = {-1, -1, -1};
-            if (pin) p += sprintf(p, "\033[%d;1H", r + 1 + yoff); /* absolute row */
             for (int c = 0; c < Wd; c++) {
-                int i = r * W + c;
-                if (zb[i] >= 1e8f) { *p++ = ' '; continue; }
+                int i = r * Wc + c;
+                if (zb[i] >= 1e8f) { *op++ = ' '; continue; }
                 float sh = 0.16f + 0.84f * dif[i], sp = spc[i];
                 float lum = sh * 0.85f + sp * 0.45f;
                 int idx = clampi(1 + (int)(lum * (nramp - 2)), 1, nramp - 1);
@@ -681,24 +843,72 @@ int main(int argc, char **argv) {
                                clampi((int)(key_col.g * sh + 255 * sp * 0.7f), 0, 255),
                                clampi((int)(key_col.b * sh + 255 * sp * 0.7f), 0, 255)};
                     if (col.r != last.r || col.g != last.g || col.b != last.b) {
-                        p = put_color(p, col);
+                        op = put_color(op, col);
                         last = col;
                     }
                 }
-                *p++ = ramp[idx];
+                *op++ = ramp[idx];
             }
-            if (use_color) p += sprintf(p, "\033[0m");
+            if (use_color) op += sprintf(op, "\033[0m");
             if (want_info && avail >= 12) {
                 int li = r - off;
                 if (li >= 0 && li < ninfo) {
-                    p += sprintf(p, "   ");
-                    p = put_info(p, &info[li], avail, lab_col, maxlab, use_color);
+                    op += sprintf(op, "   ");
+                    op = put_info(op, &info[li], avail, lab_col, maxlab, use_color);
                 }
             }
-            p += sprintf(p, pin ? "\033[K" : "\033[K\n");
+            *op++ = '\0';
         }
-        if (pin) p += sprintf(p, "\0338");                      /* restore cursor */
-        if (write(1, out, (size_t)(p - out)) < 0) break;
+        obuf_len = (size_t)(op - obuf);
+        row_len = obuf_len;
+
+        /* The frame was rendered into `obuf`: a blob of Hc rows, each an SGR +
+           ramp string for the key, optional info, and a terminating NUL.  Pull
+           out each row's length up front, then repaint those rows. */
+        size_t *rlen = malloc((size_t)Hc * sizeof *rlen);
+        size_t *roff = malloc((size_t)Hc * sizeof *roff);
+        if (!rlen || !roff) { free(rlen); free(roff); break; }
+        {
+            size_t p = 0;
+            for (int r = 0; r < Hc; r++) {
+                rlen[r] = strlen(obuf + p);
+                roff[r] = p;
+                p += rlen[r] + 1;
+            }
+        }
+
+        /* Repaint the frame several times per rendered frame.  This is what
+           makes fast output safe: whatever the shell scrolls into the key rows
+           is covered again within ~10 ms, and every write is cursor-safe. */
+        if (!pin) {
+            char *p = out;
+            if (frame > 0) p += sprintf(p, "\033[%dA\r", Hc);
+            for (int r = 0; r < Hc; r++) {          /* rows were NUL-terminated in obuf */
+                memcpy(p, obuf + roff[r], rlen[r]);
+                p += rlen[r];
+                p += sprintf(p, "\033[K\n");
+            }
+            int rc = write_all(1, out, (size_t)(p - out));
+            free(rlen); free(roff);
+            if (rc < 0) break;
+        } else {
+            int stop_mid = 0, job_started = 0;
+            for (int rep = 0; rep < reps && !stop_mid; rep++) {
+                if (rep > 0 && track) { /* a job may have started since the last check: stop at once */
+                    int pg2, tp2;
+                    if (proc_pgrp_tpgid(shell_pid, &pg2, &tp2) == 0 && tp2 > 0 && tp2 != pg2) { job_started = 1; break; }
+                }
+                for (int r = 0; r < Hc; r++) {
+                    if (repaint_row(1, rows - Hc + 1 + r, Hc, obuf + roff[r], rlen[r]) < 0) {
+                        stop_mid = 1; break;
+                    }
+                }
+                if (rep + 1 < reps && !stop_mid) usleep(sub_us);
+            }
+            free(rlen); free(roff);
+            if (stop_mid) break;
+            if (job_started) continue; /* top of the loop decides: hide, or wait out the grace */
+        }
 
         if (max_frames && frame + 1 >= max_frames) break;
         if (have_tio && !pin) {
