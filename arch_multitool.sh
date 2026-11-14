@@ -43,6 +43,11 @@ SOBER_APP="org.vinegarhq.Sober"
 # FreeSM Launcher (Minecraft, офлайн-аккаунты) из AUR
 FREESM_PKG="freesmlauncher-bin"
 
+# Настройки приветствия терминала (fastfetch / keyfetch). Файл в fish-синтаксисе,
+# его читают функции fish_greeting и clear; пишет его configure_greeting.
+GREETING_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/arch_multitool"
+GREETING_FILE="$GREETING_DIR/greeting.fish"
+
 # --- Прочее ---
 DOTFILES=(hypr kitty fish nvim neovide serpantinum gpu-screen-recorder nwg-look)
 
@@ -265,6 +270,9 @@ err()  { echo -e "${RED}[✗] $*${NC}" >&2; log "ERROR $*"; }
 
 pause() { echo; read -rp "${YELLOW}Нажмите Enter для продолжения...${NC}" _; }
 
+# Интерактивный ли запуск (есть реальный терминал на stdin/stdout)
+is_interactive() { [[ -t 0 && -t 1 ]]; }
+
 # confirm "вопрос" -> 0 если да (по умолчанию «нет»)
 confirm() {
     local ans
@@ -361,7 +369,7 @@ select_packages() {
     local -a items=("$@")
     SELECTED_PACKAGES=()
 
-    if has whiptail && [[ -t 0 && -t 1 ]]; then
+    if has whiptail && is_interactive; then
         local -a args=() it pkg desc state
         for it in "${items[@]}"; do
             IFS='|' read -r pkg desc state <<< "$it"
@@ -426,7 +434,7 @@ menu_select() {
     local -a items=("$@")
     MENU_CHOICE=""
 
-    if has whiptail && [[ -t 0 && -t 1 ]]; then
+    if has whiptail && is_interactive; then
         local -a args=() it id desc
         for it in "${items[@]}"; do
             IFS='|' read -r id desc <<< "$it"
@@ -1107,12 +1115,93 @@ install_fish_core() {
 
     apply_fish_config || warn "Конфиг fish не применён."
 
+    # Приветствие терминала: fastfetch или keyfetch (по выбору)
+    configure_greeting
+
     # keyfetch (анимированный фетч) собирается из C — нужен компилятор
     build_keyfetch
 
     install_fish_plugins
     set_default_shell_fish
     ok "Fish готов."
+}
+
+# --- Приветствие терминала (fastfetch / keyfetch) ----------------------------
+# Пишем fish-файл с настройками (его читают функции fish_greeting и clear).
+# $1 = mode (fastfetch|keyfetch|none), $2 = цвет, $3 = rainbow (0/1), $4 = высота
+write_greeting_file() {
+    local mode="${1:-fastfetch}" color="${2:-#ffc828}" rainbow="${3:-0}" height="${4:-16}"
+    mkdir -p "$GREETING_DIR"
+    {
+        echo "# Настройки приветствия терминала (создано arch_multitool)."
+        echo "# mode: fastfetch | keyfetch | none"
+        echo "set -g greeting_mode $mode"
+        echo "set -g greeting_color \"$color\""
+        echo "set -g greeting_rainbow $rainbow"
+        echo "set -g greeting_height $height"
+    } > "$GREETING_FILE"
+    ok "Приветствие: $mode → $GREETING_FILE"
+}
+
+# Интерактивный выбор приветствия (fastfetch / keyfetch + цвет).
+configure_greeting() {
+    # Не интерактивно — просто гарантируем наличие файла настроек.
+    if ! is_interactive; then
+        [[ -f "$GREETING_FILE" ]] || write_greeting_file fastfetch "#ffc828" 0 16
+        return 0
+    fi
+
+    menu_select "Приветствие терминала" \
+        "1|fastfetch — статичная информация о системе" \
+        "2|keyfetch — вращающийся 3D-ключ (закрепляется сверху, живёт всё время)" \
+        "3|Ничего (пустое приветствие)" \
+        "0|Оставить как есть" || return 0
+
+    case "$MENU_CHOICE" in
+        1) write_greeting_file fastfetch "#ffc828" 0 16 ;;
+        3) write_greeting_file none "#ffc828" 0 16 ;;
+        2)
+            local color="#ffc828" rainbow=0
+            # name|hex — цвета keyfetch (можно и словом, но храним hex)
+            local -a cols=(
+                "gold|#ffc828" "orange|#ff8c1e" "yellow|#ffdc3c" "lime|#a0ff3c"
+                "green|#46dc5a" "teal|#1ebea9" "cyan|#3cdce6" "blue|#4678ff"
+                "purple|#a05aff" "magenta|#e646dc" "pink|#ff82be" "red|#ff3c3c"
+                "silver|#bec3cd" "white|#ebebeb"
+            )
+            local -a items=() c i=1
+            for c in "${cols[@]}"; do
+                items+=("$i|${c%%|*} (${c##*|})")
+                i=$((i + 1))
+            done
+            items+=("$i|Радужный — цвет переливается")
+            local rainbow_idx=$i
+            i=$((i + 1))
+            items+=("$i|Свой HEX-цвет (например #ff8800)")
+
+            menu_select "Цвет ключа keyfetch" "${items[@]}" || return 0
+
+            if [[ "$MENU_CHOICE" == "$rainbow_idx" ]]; then
+                rainbow=1
+            elif [[ "$MENU_CHOICE" == "$i" ]]; then
+                local hex
+                read -rp "Введите HEX-цвет (например #ff8800): " hex
+                if [[ "$hex" =~ ^#?[0-9a-fA-F]{6}$ ]]; then
+                    color="#${hex#\#}"
+                else
+                    warn "Некорректный HEX — оставляю золотой (#ffc828)."
+                    color="#ffc828"
+                fi
+            elif [[ "$MENU_CHOICE" =~ ^[0-9]+$ ]] && (( MENU_CHOICE >= 1 && MENU_CHOICE <= ${#cols[@]} )); then
+                color="${cols[$((MENU_CHOICE - 1))]##*|}"
+            fi
+
+            write_greeting_file keyfetch "$color" "$rainbow" 16
+            info "Подсказка: keyfetch запускается сам; остановить — 'keyfetch --stop'."
+            ;;
+        0|"") return 0 ;;
+    esac
+    return 0
 }
 
 # Сборка keyfetch из ~/.config/fish/keyfetch.c в ~/.local/bin/keyfetch.
@@ -1227,6 +1316,7 @@ apply_all_configs() {
     resolve_configs || { pause; return; }
 
     apply_fish_config
+    configure_greeting
     install_fish_plugins
     apply_nvim_config
     apply_neovide_config
