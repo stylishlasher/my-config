@@ -450,7 +450,11 @@ static void usage(const char *a0) {
            "      --spin <x|y|xy>    rotation axes (default y)\n"
            "      --frames <n>       stop after n frames\n"
            "      --pin              run in the background, pinned to the top of the\n"
-           "                         screen; the shell stays usable below (clears screen)\n"
+           "                         screen; the shell stays usable below (clears screen).\n"
+           "                         NOTE: most terminals drop scrollback in this layout\n"
+           "      --pin-bottom       like --pin, but the key sits at the BOTTOM; the shell\n"
+           "                         above keeps its normal scrollback (long output stays\n"
+           "                         scrollable)\n"
            "      --stop             stop the pinned key of this terminal\n"
            "  -n, --no-info          only the key\n"
            "      --no-color         disable colors\n"
@@ -462,14 +466,14 @@ static void usage(const char *a0) {
 int main(int argc, char **argv) {
     RGB key_col = {255, 200, 40}, lab_col = key_col;
     int lab_set = 0, rainbow = 0, use_color = !getenv("NO_COLOR"), show_info = 1;
-    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1, pin = 0, stop_cmd = 0;
+    int H = 16, max_frames = 0, spin_x = 0, spin_y = 1, pin = 0, pin_bottom = 0, stop_cmd = 0;
     float speed = 1.f, size = 1.f;
 
     static const struct option lo[] = {
         {"color", 1, 0, 'c'}, {"label-color", 1, 0, 't'}, {"rainbow", 0, 0, 'r'},
         {"speed", 1, 0, 's'}, {"size", 1, 0, 'z'},        {"height", 1, 0, 'H'},
         {"spin", 1, 0, 'S'},  {"frames", 1, 0, 'f'},      {"no-info", 0, 0, 'n'},
-        {"no-color", 0, 0, 'N'}, {"pin", 0, 0, 'P'},      {"stop", 0, 0, 'Q'},
+        {"no-color", 0, 0, 'N'}, {"pin", 0, 0, 'P'},      {"pin-bottom", 0, 0, 'B'}, {"stop", 0, 0, 'Q'},
         {"help", 0, 0, 'h'},     {0, 0, 0, 0}};
     int o;
     while ((o = getopt_long(argc, argv, "c:t:rs:nh", lo, NULL)) != -1) {
@@ -495,6 +499,7 @@ int main(int argc, char **argv) {
         case 'n': show_info = 0; break;
         case 'N': use_color = 0; break;
         case 'P': pin = 1; break;
+        case 'B': pin = 1; pin_bottom = 1; break;
         case 'Q': stop_cmd = 1; break;
         default: usage(argv[0]); return o == 'h' ? 0 : 1;
         }
@@ -556,9 +561,13 @@ int main(int argc, char **argv) {
         char pf[128];
         pidfile_path(pf, sizeof pf);
         pin_kill_old(pf);
-        /* clear, reserve H rows at the top (scroll region = the rest), cursor below */
+        /* clear, reserve H rows (top or bottom); the rest is the shell's scroll region */
         char seq[64];
-        int sn = snprintf(seq, sizeof seq, "\033[2J\033[%d;%dr\033[%d;1H", H + 1, rows, H + 1);
+        int sn;
+        if (pin_bottom) /* region = top part of the screen (starts at row 1 -> scrollback works) */
+            sn = snprintf(seq, sizeof seq, "\033[2J\033[1;%dr\033[H", rows - H);
+        else
+            sn = snprintf(seq, sizeof seq, "\033[2J\033[%d;%dr\033[%d;1H", H + 1, rows, H + 1);
         if (write(1, seq, (size_t)sn) < 0) {}
         pid_t pid = fork();
         if (pid < 0) { perror("fork"); return 1; }
@@ -601,15 +610,28 @@ int main(int argc, char **argv) {
             struct winsize w2 = {0};
             if (ioctl(1, TIOCGWINSZ, &w2) == 0 && w2.ws_col &&
                 (w2.ws_col != cols || w2.ws_row != rows)) {
+                int old_rows = rows;
                 cols = w2.ws_col; rows = w2.ws_row;
                 avail = cols - W - 3;
                 if (avail > 200) avail = 200;
-                char seq[64];
-                int sn = snprintf(seq, sizeof seq, "\0337\033[%d;%dr\0338", H + 1, rows);
+                char seq[512];
+                int sn = 0;
+                if (pin_bottom) { /* wipe the old footer, move the region */
+                    sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\0337");
+                    for (int r = 0; r < H; r++) {
+                        int row = old_rows - H + 1 + r;
+                        if (row >= 1 && row <= rows && sn < 400)
+                            sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\033[%d;1H\033[2K", row);
+                    }
+                    sn += snprintf(seq + sn, sizeof seq - (size_t)sn, "\033[1;%dr\0338", rows - H);
+                } else {
+                    sn = snprintf(seq, sizeof seq, "\0337\033[%d;%dr\0338", H + 1, rows);
+                }
                 if (write(1, seq, (size_t)sn) < 0) break;
             }
         }
         int Wd = W < cols ? W : cols;
+        int yoff = pin_bottom ? rows - H : 0;
         if (rainbow) {
             key_col = hsv((float)(t * 50.0), 0.75f, 1.f);
             if (!lab_set) lab_col = key_col;
@@ -647,7 +669,7 @@ int main(int argc, char **argv) {
         else if (frame > 0) p += sprintf(p, "\033[%dA\r", H);
         for (int r = 0; r < H; r++) {
             RGB last = {-1, -1, -1};
-            if (pin) p += sprintf(p, "\033[%d;1H", r + 1);      /* absolute row */
+            if (pin) p += sprintf(p, "\033[%d;1H", r + 1 + yoff); /* absolute row */
             for (int c = 0; c < Wd; c++) {
                 int i = r * W + c;
                 if (zb[i] >= 1e8f) { *p++ = ' '; continue; }
