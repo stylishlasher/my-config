@@ -1047,6 +1047,18 @@ apply_fish_config() {
     for item in config.fish fish_plugins fish_variables conf.d functions completions; do
         [[ -e "$src/$item" ]] && cp -a "$src/$item" "$dst/"
     done
+
+    # Исходник keyfetch.c (анимированный фетч) — кладём рядом с конфигом,
+    # функция keyfetch сама соберёт его при первом запуске.
+    local keyfetch_src=""
+    for keyfetch_src in "$CONFIGS_DIR/keyfetch.c" "$src/keyfetch.c" "$src/functions/keyfetch.c"; do
+        [[ -f "$keyfetch_src" ]] && break
+    done
+    if [[ -f "$keyfetch_src" ]]; then
+        cp -a "$keyfetch_src" "$dst/keyfetch.c"
+        ok "keyfetch.c скопирован → $dst/keyfetch.c"
+    fi
+
     normalize_paths "$dst"
     ok "Конфиг fish применён → $dst"
 }
@@ -1094,9 +1106,33 @@ install_fish_core() {
     fi
 
     apply_fish_config || warn "Конфиг fish не применён."
+
+    # keyfetch (анимированный фетч) собирается из C — нужен компилятор
+    build_keyfetch
+
     install_fish_plugins
     set_default_shell_fish
     ok "Fish готов."
+}
+
+# Сборка keyfetch из ~/.config/fish/keyfetch.c в ~/.local/bin/keyfetch.
+# Если компилятора нет — ставим gcc; если исходника нет — тихо пропускаем.
+build_keyfetch() {
+    local src="$HOME/.config/fish/keyfetch.c"
+    local bin="$HOME/.local/bin/keyfetch"
+    [[ -f "$src" ]] || return 0
+
+    if ! has cc; then
+        warn "Установка gcc (нужен для сборки keyfetch)..."
+        pac_install gcc || { warn "gcc не установлен — keyfetch соберётся при первом запуске (если появится cc)."; return 0; }
+    fi
+
+    mkdir -p "$(dirname "$bin")"
+    if cc -O2 -o "$bin" "$src" -lm; then
+        ok "keyfetch собран → $bin"
+    else
+        warn "Не удалось собрать keyfetch (соберётся при первом запуске терминала)."
+    fi
 }
 
 install_fish() { clear; install_fish_core; pause; }

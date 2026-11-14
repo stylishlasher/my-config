@@ -89,6 +89,11 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 - dotfiles (окружение **Serpantinum**, см. раздел «Благодарности»);
 - раскладка клавиатуры `us,ru` в Hyprland (автопатч `settings.lua`);
 - `fish` + плагины (`fisher`, `tide`) с применением конфига;
+- **keyfetch** — свой анимированный 3D-фетч с вращающимся ключом (`keyfetch.c`): при первом
+  запуске терминала автоматически собирается (`cc -O2 ... -lm`) и запускается сам, заменяя
+  `fastfetch` в стартовом приветствии. Любая клавиша — остановить. Команду можно вызвать и
+  вручную: `keyfetch -c orange --size 1.5` (флаги как у обычных фетчей: `-c/--color`,
+  `-r/--rainbow`, `--size`, `--height`, `-n/--no-info` и т.д.);
 - `neovim` + `neovide` с применением конфига и Nerd Font;
 - `mpv` (медиаплеер) — ставится автоматически;
 - **GPU Screen Recorder** (`gpu-screen-recorder` + UI-оверлей);
