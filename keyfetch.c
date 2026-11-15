@@ -141,25 +141,24 @@ static int write_all(int fd, const char *b, size_t n) {
     return 0;
 }
 
-/* Repaint a single text row (no newline) with small, cursor-safe writes.
-   Every write is wrapped in save/restore so the shell cursor can never be
-   left stranded inside the key, even if the kernel splits the stream while
-   the shell is flooding the tty. */
+/* Repaint a single text row (no newline).  One self-contained write per row:
+   save cursor, jump to the row, paint it, clear the rest of the line, restore.
+   The row is deliberately NOT split into pieces: a continuation piece would have to
+   start in the middle of the row, but the cursor column is not knowable from the byte
+   offset (colour escapes, UTF-8), and the tty write lock already makes one write()
+   atomic against whatever the shell prints, so the cursor can't be left stranded. */
 static int repaint_row(int bottom, int row_abs, int Hc, const char *s, size_t len) {
-    size_t cap = len + 32;
+    size_t cap = len + 48;
     char *buf = malloc(cap);
     if (!buf) return -1;
     size_t n = 0;
-    for (size_t off = 0; off < len; off += 512) {
-        size_t ch = len - off > 512 ? 512 : len - off;
-        if (bottom) n += (size_t)sprintf(buf + n, "\0337\033[%d;1H", row_abs);
-        else        n += (size_t)sprintf(buf + n, "\033[%dA\r", Hc);
-        memmove(buf + n, s + off, ch);
-        n += ch;
-        n += (size_t)sprintf(buf + n, "\033[K");
-        if (bottom) n += (size_t)sprintf(buf + n, "\0338");
-        else        n += (size_t)sprintf(buf + n, "\r");
-    }
+    if (bottom) n += (size_t)sprintf(buf + n, "\0337\033[%d;1H", row_abs);
+    else        n += (size_t)sprintf(buf + n, "\033[%dA\r", Hc);
+    memcpy(buf + n, s, len);
+    n += len;
+    n += (size_t)sprintf(buf + n, "\033[K");
+    if (bottom) n += (size_t)sprintf(buf + n, "\0338");
+    else        n += (size_t)sprintf(buf + n, "\r");
     int rc = write_all(1, buf, n);
     free(buf);
     return rc;
@@ -493,7 +492,11 @@ static int same_comm(int pid) { /* don't kill a recycled pid that isn't us */
     snprintf(p, sizeof p, "/proc/%d/comm", pid);
     first_line(p, a, sizeof a);
     first_line("/proc/self/comm", b, sizeof b);
-    return a[0] && !strcmp(a, b);
+    if (a[0] && !strcmp(a, b)) return 1;
+    static const char *family[] = {"keyfetch", "treefetch", "tomatofetch", "stoolfetch", "skeletonfetch"};
+    for (size_t i = 0; i < sizeof family / sizeof *family; i++)
+        if (a[0] && !strcmp(a, family[i])) return 1; /* any key/tree/tomato/... daemon may replace another */
+    return 0;
 }
 
 static int alive(int pid) { /* a zombie counts as gone */
