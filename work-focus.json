@@ -1,0 +1,326 @@
+{
+  "name": "work-focus",
+  "created": 1794848318439,
+  "palette": {
+    "base": "#1b1e24",
+    "mantle": "#16191e",
+    "crust": "#111317",
+    "surface0": "#242830",
+    "surface1": "#2d323c",
+    "surface2": "#383e4a",
+    "overlay0": "#5d6575",
+    "overlay1": "#7b8496",
+    "overlay2": "#99a2b4",
+    "text": "#d9dee8",
+    "subtext0": "#aab2c2",
+    "subtext1": "#c2c9d6",
+    "blue": "#6c9bd1",
+    "sapphire": "#5aa6c8",
+    "teal": "#5fb3a6",
+    "green": "#8fbf8f",
+    "yellow": "#d9b86a",
+    "peach": "#d99a6a",
+    "maroon": "#a85560",
+    "red": "#e07a85",
+    "pink": "#c792b8",
+    "mauve": "#9a8fd0"
+  },
+  "settings": {
+    "general": {
+      "language": "ru",
+      "muteSfx": false,
+      "weatherInterval": 15,
+      "weatherUnit": "metric",
+      "sfxVolume": 100,
+      "screenshotCaptureOnRelease": false,
+      "quickactions": true,
+      "settingsSeparateWindow": false
+    },
+    "syspanel": {
+      "clipExpandProgress": 0,
+      "clipExpanded": false,
+      "clipState": 1
+    },
+    "bar": {
+      "position": "top",
+      "width": 100,
+      "opacity": 100,
+      "style": "fill",
+      "time": {
+        "format": "ddd d MMM  HH:mm"
+      },
+      "autohide": false,
+      "autohideTimeout": 1000,
+      "distinctPills": false,
+      "workspaceCount": 9,
+      "groupColors": {
+        "g_kb": "#6c9bd1",
+        "g_timedate": "#6c9bd1",
+        "g_info": "#5fb3a6",
+        "g_sysmon": "#8fbf8f"
+      },
+      "workspacesStyle": "numbers",
+      "timeStyle": "classic",
+      "timeShowDate": false,
+      "hideEmptyWorkspaces": true,
+      "visBarCount": 16,
+      "visAlignment": "center",
+      "visContinuous": false,
+      "sysmonStyle": "bars",
+      "sysmonStats": [
+        "cpu",
+        "ram",
+        "temp",
+        "disk"
+      ],
+      "batStyle": "text",
+      "wifiStyle": "text",
+      "btStyle": "text",
+      "kbStyle": "text",
+      "volStyle": "text",
+      "height": 32,
+      "centerByEdges": true,
+      "menuStyle": "icon",
+      "menuShowLauncher": true,
+      "workspaces": {
+        "perMonitorNumbering": false,
+        "monitors": {
+          "eDP-2": {
+            "first": 1,
+            "count": 10
+          }
+        }
+      },
+      "mediaInfoMode": "author",
+      "mediaHideWhenIdle": true,
+      "mediaShowControls": true,
+      "mediaShowIcon": false,
+      "mediaWidth": 200,
+      "menuItems": [
+        "launcher"
+      ],
+      "modules": {
+        "left": [
+          "left",
+          "workspaces"
+        ],
+        "center": [
+          "media"
+        ],
+        "right": [
+          "tray",
+          "sysmon",
+          [
+            "kb",
+            "wifi",
+            "vol",
+            "bat"
+          ],
+          "timedate"
+        ]
+      }
+    },
+    "theme": {
+      "fontFamily": "Adwaita Mono",
+      "borderRadius": 8,
+      "activePreset": "Work Focus",
+      "matugen": false,
+      "colors": {
+        "base": "#1b1e24",
+        "mantle": "#16191e",
+        "crust": "#111317",
+        "surface0": "#242830",
+        "surface1": "#2d323c",
+        "surface2": "#383e4a",
+        "overlay0": "#5d6575",
+        "overlay1": "#7b8496",
+        "overlay2": "#99a2b4",
+        "text": "#d9dee8",
+        "subtext0": "#aab2c2",
+        "subtext1": "#c2c9d6",
+        "blue": "#6c9bd1",
+        "sapphire": "#5aa6c8",
+        "teal": "#5fb3a6",
+        "green": "#8fbf8f",
+        "yellow": "#d9b86a",
+        "peach": "#d99a6a",
+        "maroon": "#a85560",
+        "red": "#e07a85",
+        "pink": "#c792b8",
+        "mauve": "#9a8fd0"
+      },
+      "blurBackground": false,
+      "blurStyle": "blur",
+      "elementOpacity": 100,
+      "mode": "dark",
+      "apps": [
+        "cava",
+        "gtk",
+        "kitty",
+        "qt"
+      ]
+    },
+    "idle": {
+      "enabled": true,
+      "actions": {
+        "dim": {
+          "id": "dim",
+          "timeout": 300,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "dpms": {
+          "id": "dpms",
+          "timeout": 900,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "lock": {
+          "id": "lock",
+          "timeout": 600,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        },
+        "suspend": {
+          "id": "suspend",
+          "timeout": 1800,
+          "enabled": true,
+          "respectInhibitors": true,
+          "mprisInhibit": false,
+          "command": "",
+          "resumeCommand": "",
+          "isCustom": false
+        }
+      },
+      "manualInhibit": false,
+      "caffeineStartTime": 0,
+      "caffeineEndTime": 0,
+      "lockOnSleep": true
+    },
+    "notifications": {
+      "dnd": false,
+      "position": "top right",
+      "sound": false,
+      "showEmptyGraphic": false
+    },
+    "display": {
+      "monitors": {
+        "eDP-1": {
+          "enabled": false,
+          "scale": 1
+        },
+        "eDP-2": {
+          "enabled": false,
+          "scale": 1
+        }
+      }
+    },
+    "dock": {
+      "enabled": true,
+      "position": "bottom",
+      "elementSize": 36,
+      "floating": false,
+      "opacity": 100,
+      "autohide": true,
+      "autohideTimeout": 1000,
+      "editing": false,
+      "apps": [
+        {
+          "name": "Firefox",
+          "comment": "Быстрый и приватный браузер",
+          "desktop_id": "firefox",
+          "icon": "firefox"
+        },
+        {
+          "name": "Kitty",
+          "comment": "Terminal",
+          "desktop_id": "kitty",
+          "icon": "kitty"
+        },
+        {
+          "name": "Neovim",
+          "comment": "Редактирование текстовых файлов",
+          "desktop_id": "nvim",
+          "icon": "nvim"
+        },
+        {
+          "name": "Code",
+          "comment": "Редактор кода",
+          "desktop_id": "code",
+          "icon": "vscode"
+        },
+        {
+          "name": "Files",
+          "comment": "Файловый менеджер",
+          "desktop_id": "org.gnome.Nautilus",
+          "icon": "org.gnome.Nautilus"
+        },
+        {
+          "name": "Telegram",
+          "comment": "New era of messaging",
+          "desktop_id": "org.telegram.desktop",
+          "icon": "org.telegram.desktop"
+        }
+      ],
+      "overrideBoundsCorrection": false,
+      "enableScrolling": false,
+      "visibleElements": 7,
+      "exclusive": false,
+      "cascadeScale": false,
+      "onTop": true,
+      "smartAutohide": true,
+      "hoverScale": 110,
+      "showRunningApps": true,
+      "runningScope": "workspace",
+      "focusRunning": true,
+      "showRunningIndicators": true
+    },
+    "osd": {
+      "horizontalPosition": 50,
+      "verticalPosition": 90,
+      "orientation": "horizontal",
+      "showCapsLock": true,
+      "showNumLock": true,
+      "showAirplane": true,
+      "attachToBar": true
+    },
+    "lockscreen": {
+      "fingerprintEnabled": true,
+      "attemptLimitEnabled": true,
+      "passwordMaxAttempts": 5,
+      "fingerprintMaxAttempts": 5,
+      "backgroundMode": "follow",
+      "customBackground": ""
+    },
+    "launcher": {
+      "position": "center",
+      "width": 600,
+      "itemCount": 8,
+      "terminalCommand": "kitty -e",
+      "smartRanking": true,
+      "searchProvider": "duckduckgo"
+    },
+    "widgets": {
+      "hideBarInRedactor": true
+    },
+    "inputs": {
+      "passwordReveal": true
+    }
+  },
+  "widgets": {
+    "eDP-2": []
+  },
+  "wallpapers": {}
+}
