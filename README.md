@@ -231,3 +231,10 @@ curl -fsSL install.serpantinum.dev | bash
 
 Этот репозиторий распространяется под лицензией **GNU AGPL-3.0** — той же, что и
 **Serpantinum** (см. [LICENSE](LICENSE)).
+
+
+
+
+
+THIS IS BETA OF MY STUPID AI SLOP MANGOWM DOTFILES, DON'T USE THEM
+ALSO COMMAND TO INSTALL WILL BE HERE WHEN THEY WILL BE READY
