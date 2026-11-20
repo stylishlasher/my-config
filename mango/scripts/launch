@@ -40,10 +40,13 @@ case "$1" in
     exec foot --app-id mango-nmtui -e nmtui
     ;;
   launcher)
-    # Тоггл лаунчера приложений (не закрывает dmenu-меню)
-    if pgrep -x fuzzel >/dev/null 2>&1 && ! pgrep -f 'fuzzel.*--dmenu' >/dev/null 2>&1; then
-      pkill -x fuzzel >/dev/null 2>&1 || true
-      exit 0
+    # Тоггл лаунчера приложений (не закрывает открытые dmenu-меню)
+    if pgrep -x fuzzel >/dev/null 2>&1; then
+      mapfile -t _fz_pids < <(pgrep -a fuzzel 2>/dev/null | awk '!/--dmenu/{print $1}')
+      if [ "${#_fz_pids[@]}" -gt 0 ]; then
+        kill "${_fz_pids[@]}" >/dev/null 2>&1 || true
+        exit 0
+      fi
     fi
     exec fuzzel
     ;;

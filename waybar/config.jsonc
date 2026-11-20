@@ -22,7 +22,7 @@
     "interval": "once",
     "format": "{}",
     "tooltip": false,
-    "on-click": "fuzzel"
+    "on-click": "~/.config/mango/scripts/launch launcher"
   },
   "mango/workspaces": {
     "format": "{icon}",
@@ -48,13 +48,8 @@
   },
   "clock": {
     "format": "{:%H:%M}",
-    "tooltip-format": "{:%A, %d %B %Y}",
-    "calendar": {
-      "mode": "month",
-      "format": {
-        "today": "<span color='#cba6f7'><b>{}</b></span>"
-      }
-    }
+    "tooltip-format": "{:%A, %d %B %Y}\nЛКМ — календарь и погода",
+    "on-click": "~/.config/mango/scripts/bar-menu clock"
   },
   "pulseaudio": {
     "format": "{icon} {volume}%",
@@ -67,16 +62,19 @@
       ],
       "headphone": "󰋋"
     },
-    "on-click": "pavucontrol",
+    "on-click": "~/.config/mango/scripts/bar-menu audio",
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-    "scroll-step": 5
+    "scroll-step": 5,
+    "tooltip-format": "Громкость: {volume}%\nЛКМ — меню звука · ПКМ — mute"
   },
   "network": {
-    "format-wifi": "󰖩",
+    "format-wifi": "󰖩  {essid}",
     "format-ethernet": "󰈀",
     "format-disconnected": "󰌙",
-    "tooltip-format": "{essid} {ipaddr}",
-    "on-click": "~/.config/mango/scripts/launch nmtui"
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}\nЛКМ — меню сети",
+    "tooltip-format-ethernet": "{ifname}\n{ipaddr}\nЛКМ — меню сети",
+    "tooltip-format-disconnected": "Нет соединения\nЛКМ — меню сети",
+    "on-click": "~/.config/mango/scripts/bar-menu network"
   },
   "battery": {
     "states": {
@@ -97,7 +95,9 @@
       "󰂁",
       "󰂂",
       "󰁹"
-    ]
+    ],
+    "tooltip-format": "{capacity}% · {timeTo}\nЛКМ — питание и батарея",
+    "on-click": "~/.config/mango/scripts/bar-menu battery"
   },
   "custom/settings": {
     "format": "󰒓",

@@ -29,15 +29,16 @@ fi
 # Значения по умолчанию (Catppuccin Mocha, fallback)
 ACCENT="cba6f7"
 TEXT="cdd6f4"
-INSIDE="1e1e2eee"
-RING="313244"
-RING_CLEAR="f5e0dc"
-RING_CAPS="fab387"
+SUBTEXT="bac2de"
+INSIDE="1e1e2ecc"
+RING="45475a"
+RING_CLEAR="a6e3a1"
+RING_CAPS="f9e2af"
 RING_VER="89b4fa"
 RING_WRONG="f38ba8"
 KEY_HL="a6e3a1"
-BS_HL="f5e0dc"
-BG_COLOR="1e1e2e"
+BS_HL="f38ba8"
+BG_COLOR="11111b"
 
 # Подтянуть акцент/текст из настроек и цветов Waybar, если есть
 if [ -f "$ENVF" ]; then
@@ -47,7 +48,7 @@ fi
 [ -n "${ACCENT:-}" ] && ACCENT="${ACCENT#\#}"
 
 if [ -f "$WB_COLORS" ] && command -v python3 >/dev/null 2>&1; then
-  read -r ACCENT_HEX TEXT_HEX BASE_HEX < <(python3 - "$WB_COLORS" "${ACCENT:-}" <<'PY' 2>/dev/null || echo ""
+  read -r ACCENT_HEX TEXT_HEX BASE_HEX SUB_HEX < <(python3 - "$WB_COLORS" "${ACCENT:-}" <<'PY' 2>/dev/null || echo ""
 import re, sys
 path, fb = sys.argv[1], sys.argv[2]
 vals = {}
@@ -62,18 +63,20 @@ except Exception:
 accent = vals.get('accent', fb or 'cba6f7').lower()
 text = vals.get('text', 'cdd6f4').lower()
 base = vals.get('base', '1e1e2e').lower()
-print(accent, text, base)
+sub = vals.get('subtext0', vals.get('subtle', 'bac2de')).lower()
+print(accent, text, base, sub)
 PY
   )
   if [[ "${ACCENT_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then ACCENT="$ACCENT_HEX"; fi
   if [[ "${TEXT_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then TEXT="$TEXT_HEX"; fi
-  if [[ "${BASE_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then BG_COLOR="$BASE_HEX"; INSIDE="${BASE_HEX}ee"; fi
+  if [[ "${BASE_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then BG_COLOR="$BASE_HEX"; INSIDE="${BASE_HEX}cc"; fi
+  if [[ "${SUB_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then SUBTEXT="$SUB_HEX"; fi
 fi
 
-# Производные цвета от акцента (простая тонировка без внешних зависимостей не идеальна,
-# поэтому используем акцент как основной highlight, а состояния — различимые фиксированные оттенки)
+# Производные цвета от акцента (акцент как основной highlight)
 RING_VER="$ACCENT"
 KEY_HL="$ACCENT"
+BS_HL="f38ba8"
 
 HAS_EFFECTS=0
 if "$LOCK_BIN" --help 2>&1 | grep -Eq -- '--effect-blur|--screenshots|--clock'; then
@@ -84,8 +87,8 @@ FONT="JetBrainsMono Nerd Font"
 
 COMMON_ARGS=(
   --indicator
-  --indicator-radius 110
-  --indicator-thickness 8
+  --indicator-radius 120
+  --indicator-thickness 10
   --ring-color "$RING"
   --ring-clear-color "$RING_CLEAR"
   --ring-caps-lock-color "$RING_CAPS"
@@ -111,20 +114,29 @@ COMMON_ARGS=(
   --separator-color 00000000
   --layout-bg-color 00000000
   --layout-border-color 00000000
-  --layout-text-color "$TEXT"
+  --layout-text-color "$SUBTEXT"
   --font "$FONT"
+  --show-failed-attempts
 )
 
 if [ "$HAS_EFFECTS" = "1" ]; then
+  EFFECT_EXTRA=()
+  if "$LOCK_BIN" --help 2>&1 | grep -q -- '--indicator-idle-visible'; then
+    EFFECT_EXTRA+=(--indicator-idle-visible)
+  fi
+  if "$LOCK_BIN" --help 2>&1 | grep -q -- '--indicator-caps-lock'; then
+    EFFECT_EXTRA+=(--indicator-caps-lock)
+  fi
   exec "$LOCK_BIN" \
     --screenshots \
     --clock \
     --indicator \
     --timestr "%H:%M" \
     --datestr "%A, %d %B" \
-    --effect-blur 10x5 \
-    --effect-vignette 0.25:0.55 \
-    --fade-in 0.2 \
+    --effect-blur 12x6 \
+    --effect-vignette 0.15:0.75 \
+    --fade-in 0.25 \
+    "${EFFECT_EXTRA[@]}" \
     "${COMMON_ARGS[@]}" \
     "$@"
 fi
@@ -135,8 +147,13 @@ if [ -n "${WALLPAPER:-}" ] && [ -f "${WALLPAPER:-}" ]; then
   IMG="$WALLPAPER"
 fi
 
+PLAIN_EXTRA=()
+if "$LOCK_BIN" --help 2>&1 | grep -q -- '--indicator-caps-lock'; then
+  PLAIN_EXTRA+=(--indicator-caps-lock)
+fi
+
 if [ -n "$IMG" ]; then
-  exec "$LOCK_BIN" -f -i "$IMG" -s fill "${COMMON_ARGS[@]}" "$@"
+  exec "$LOCK_BIN" -f -i "$IMG" -s fill "${PLAIN_EXTRA[@]}" "${COMMON_ARGS[@]}" "$@"
 else
-  exec "$LOCK_BIN" -f -c "$BG_COLOR" "${COMMON_ARGS[@]}" "$@"
+  exec "$LOCK_BIN" -f -c "$BG_COLOR" "${PLAIN_EXTRA[@]}" "${COMMON_ARGS[@]}" "$@"
 fi

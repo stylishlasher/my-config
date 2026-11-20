@@ -1,0 +1,378 @@
+#!/usr/bin/env bash
+# Кастомные меню для модулей Waybar (минималистичные, на gum в foot)
+# Использование: bar-menu {clock|audio|network|battery}
+# Повторный запуск того же меню — закрывает его (toggle)
+set -u
+
+ENVF="$HOME/.config/mango/settings.env"
+SCR="$HOME/.config/mango/scripts"
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+load_env() {
+  ACCENT=cba6f7
+  WEATHER_LOCATION=""
+  [ -f "$ENVF" ] && . "$ENVF" 2>/dev/null || true
+}
+
+# Атомарно записать/обновить ключ в settings.env
+set_env() {
+  local key="$1" val="$2" tmp found=0
+  mkdir -p "$(dirname "$ENVF")"
+  touch "$ENVF"
+  if have flock; then
+    exec 9>"$ENVF.lock"
+    flock 9
+  fi
+  tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")" || {
+    if have flock; then flock -u 9 2>/dev/null || true; exec 9>&- 2>/dev/null || true; fi
+    return 1
+  }
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      "${key}="*) printf '%s=%q\n' "$key" "$val" >> "$tmp"; found=1 ;;
+      *)          printf '%s\n' "$line" >> "$tmp" ;;
+    esac
+  done < "$ENVF"
+  [ "$found" = 1 ] || printf '%s=%q\n' "$key" "$val" >> "$tmp"
+  mv "$tmp" "$ENVF"
+  if have flock; then
+    flock -u 9 2>/dev/null || true
+    exec 9>&- 2>/dev/null || true
+  fi
+}
+
+notify() {
+  have notify-send && notify-send -t "${2:-2000}" "$1" "${3:-}" 2>/dev/null || true
+}
+
+# ── Toggle / запуск в foot ───────────────────────────────────────────────
+toggle_menu() {
+  local id="$1"; shift
+  if pgrep -f -- "--app-id ${id}" >/dev/null 2>&1; then
+    pkill -f -- "--app-id ${id}" >/dev/null 2>&1 || true
+    exit 0
+  fi
+  exec foot --app-id "$id" -W 92x34 -e "$0" --internal "$@"
+}
+
+require_gum() {
+  have gum && return 0
+  echo "Нужен gum: sudo pacman -S gum"
+  echo; read -r -p "Нажмите Enter для выхода..." _ || true
+  exit 1
+}
+
+header() {
+  clear
+  gum style --border rounded --border-foreground "#${ACCENT}" --foreground "#${ACCENT}" \
+    --padding "0 2" --bold "$1"
+  echo
+}
+
+# ── CLOCK: календарь + погода + прогноз + локация ─────────────────────────
+weather_fetch() {
+  local loc="$1" q
+  if [ -n "$loc" ]; then
+    q="${loc// /+}"
+  else
+    q=""
+  fi
+  # wttr.in: текущая погода + прогноз (JSON), компактный вывод ниже
+  curl -fsS --max-time 8 "https://wttr.in/${q}?lang=ru&M&format=j1" 2>/dev/null
+}
+
+weather_render() {
+  local json="$1" loc_label="$2"
+  if [ -z "$json" ]; then
+    echo "  Не удалось получить погоду (нет сети или сервис недоступен)."
+    return 0
+  fi
+  python3 - "$loc_label" <<'PY' "$json" 2>/dev/null || echo "  Ошибка разбора данных погоды."
+import json, sys
+
+loc_label = sys.argv[1] if len(sys.argv) > 1 else ""
+try:
+    data = json.loads(sys.argv[2]) if len(sys.argv) > 2 else json.loads(sys.stdin.read())
+except Exception:
+    print("  Ошибка разбора данных погоды.")
+    sys.exit(0)
+
+def pick_desc(arr):
+    if not arr:
+        return ""
+    v = arr[0].get('lang_ru') or arr[0].get('value') or ""
+    if isinstance(v, list) and v:
+        v = v[0].get('value','')
+    return str(v)
+
+cur = (data.get('current_condition') or [{}])[0]
+area = (data.get('nearest_area') or [{}])[0]
+place = ""
+try:
+    an = area.get('areaName', [{}])[0].get('value','')
+    cn = area.get('country', [{}])[0].get('value','')
+    place = ", ".join([x for x in [an, cn] if x])
+except Exception:
+    place = ""
+if loc_label and not place:
+    place = loc_label
+if place:
+    print(f"  Локация: {place}")
+desc = pick_desc(cur.get('lang_ru') or cur.get('weatherDesc') or [])
+temp = cur.get('temp_C','?')
+feels = cur.get('FeelsLikeC','?')
+hum = cur.get('humidity','?')
+wind = cur.get('windspeedKmph','?')
+print(f"  Сейчас: {temp}°C, ощущается {feels}°C  {('· ' + desc) if desc else ''}")
+print(f"  Влажность: {hum}%   Ветер: {wind} км/ч")
+print()
+print("  Прогноз:")
+days = data.get('weather') or []
+ru_days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
+for d in days[:3]:
+    date = d.get('date','')
+    try:
+        import datetime
+        dt = datetime.datetime.strptime(date, '%Y-%m-%d')
+        wd = ru_days[dt.weekday()]
+        dlabel = f"{wd} {dt.strftime('%d.%m')}"
+    except Exception:
+        dlabel = date
+    maxt = d.get('maxtempC','?')
+    mint = d.get('mintempC','?')
+    hourly = d.get('hourly') or []
+    mid = hourly[len(hourly)//2] if hourly else {}
+    ddesc = pick_desc(mid.get('lang_ru') or mid.get('weatherDesc') or [])
+    print(f"   • {dlabel}: {mint}..{maxt}°C  {ddesc}")
+PY
+}
+
+menu_clock() {
+  require_gum
+  load_env
+  while true; do
+    header "Время · Календарь · Погода"
+    gum style --foreground "#cdd6f4" --bold "  $(date '+%A, %d %B %Y  %H:%M:%S')"
+    echo
+    if have cal; then
+      cal -m 2>/dev/null | sed 's/^/  /' || cal 2>/dev/null | sed 's/^/  /' || true
+      echo
+    fi
+
+    local loc_disp="${WEATHER_LOCATION:-авто (по IP)}"
+    gum style --foreground "#7f849c" "  Погода  [локация: ${loc_disp}]"
+    local wjson
+    wjson="$(weather_fetch "${WEATHER_LOCATION:-}")"
+    weather_render "$wjson" "$loc_disp" | sed 's/^/ /'
+    echo
+
+    local c
+    c=$(gum choose --height 10 --header "Действие" \
+      "Обновить" \
+      "Сменить локацию" \
+      "Авто-локация (по IP)" \
+      "Закрыть") || exit 0
+    case "$c" in
+      "Обновить") continue ;;
+      "Сменить локацию")
+        local nl
+        nl=$(gum input --placeholder "Город или координаты (напр. Moscow, Berlin, 55.75,37.61)" --value "${WEATHER_LOCATION:-}") || continue
+        nl="${nl#${nl%%[![:space:]]*}}"; nl="${nl%${nl##*[![:space:]]}}"
+        set_env WEATHER_LOCATION "$nl"
+        load_env
+        ;;
+      "Авто-локация (по IP)")
+        set_env WEATHER_LOCATION ""
+        load_env
+        ;;
+      "Закрыть"|*) exit 0 ;;
+    esac
+  done
+}
+
+# ── AUDIO ────────────────────────────────────────────────────────────────
+audio_info() {
+  local vol="?" mute="no"
+  if have wpctl; then
+    local out
+    out=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)
+    vol=$(awk '{v=$2*100; printf "%d", (v>=0)?v:0}' <<<"$out")
+    grep -q MUTED <<<"$out" && mute="yes" || mute="no"
+  elif have pactl; then
+    vol=$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -oP '\d+%' | head -1 | tr -d '%')
+    [ -z "$vol" ] && vol="?"
+    local m; m=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null || true)
+    grep -qi yes <<<"$m" && mute="yes" || mute="no"
+  fi
+  printf '%s|%s' "$vol" "$mute"
+}
+
+audio_set() {
+  local v="$1"
+  if have wpctl; then wpctl set-volume @DEFAULT_AUDIO_SINK@ "${v}%"
+  elif have pactl; then pactl set-sink-volume @DEFAULT_SINK@ "${v}%"; fi
+}
+
+audio_mute_toggle() {
+  if have wpctl; then wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+  elif have pactl; then pactl set-sink-mute @DEFAULT_SINK@ toggle; fi
+}
+
+menu_audio() {
+  require_gum
+  load_env
+  while true; do
+    header "Звук"
+    local info vol mute mlabel
+    info=$(audio_info); vol="${info%%|*}"; mute="${info##*|}"
+    [ "$mute" = "yes" ] && mlabel="выкл (muted)" || mlabel="вкл"
+    gum style --foreground "#cdd6f4" "  Громкость: ${vol}%   ·   Звук: ${mlabel}"
+    echo
+    local c
+    c=$(gum choose --height 12 --header "Действие" \
+      "Громкость 100%" "Громкость 75%" "Громкость 50%" "Громкость 25%" "Громкость 10%" \
+      "Вкл/выкл звук (mute)" \
+      "Открыть микшер (pavucontrol)" \
+      "Закрыть") || exit 0
+    case "$c" in
+      "Громкость 100%") audio_set 100 ;;
+      "Громкость 75%")  audio_set 75 ;;
+      "Громкость 50%")  audio_set 50 ;;
+      "Громкость 25%")  audio_set 25 ;;
+      "Громкость 10%")  audio_set 10 ;;
+      "Вкл/выкл звук (mute)") audio_mute_toggle ;;
+      "Открыть микшер (pavucontrol)")
+        have pavucontrol && (pavucontrol >/dev/null 2>&1 &)
+        ;;
+      "Закрыть"|*) exit 0 ;;
+    esac
+  done
+}
+
+# ── NETWORK ──────────────────────────────────────────────────────────────
+menu_network() {
+  require_gum
+  load_env
+  while true; do
+    header "Сеть"
+    if have nmcli; then
+      gum style --foreground "#cdd6f4" "  Состояние:"
+      nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status 2>/dev/null | \
+        awk -F: '{printf "   • %s (%s): %s %s\n",$1,$2,$3,($4!=""&&$4!="--"?"— "$4:"")}' || echo "   (недоступно)"
+      echo
+      local wifi
+      wifi=$(nmcli -t -f WIFI g 2>/dev/null | head -1)
+      gum style --foreground "#7f849c" "  Wi‑Fi: ${wifi:-?}"
+    else
+      echo "  nmcli (NetworkManager) не найден."
+    fi
+    echo
+    local c
+    c=$(gum choose --height 12 --header "Действие" \
+      "Открыть nmtui (подключение/пароли)" \
+      "Включить Wi‑Fi" "Выключить Wi‑Fi" \
+      "Обновить" "Закрыть") || exit 0
+    case "$c" in
+      "Открыть nmtui (подключение/пароли)")
+        if [ -x "$SCR/launch" ]; then "$SCR/launch" nmtui >/dev/null 2>&1 & else have nmtui && (foot -e nmtui >/dev/null 2>&1 &); fi
+        ;;
+      "Включить Wi‑Fi")  nmcli radio wifi on 2>/dev/null || true ;;
+      "Выключить Wi‑Fi") nmcli radio wifi off 2>/dev/null || true ;;
+      "Обновить") continue ;;
+      "Закрыть"|*) exit 0 ;;
+    esac
+  done
+}
+
+# ── BATTERY / POWER ──────────────────────────────────────────────────────
+menu_battery() {
+  require_gum
+  load_env
+  while true; do
+    header "Питание и батарея"
+    local shown=0
+    for bat in /sys/class/power_supply/BAT*; do
+      [ -d "$bat" ] || continue
+      shown=1
+      local cap status
+      cap=$(cat "$bat/capacity" 2>/dev/null || echo "?")
+      status=$(cat "$bat/status" 2>/dev/null || echo "?")
+      gum style --foreground "#cdd6f4" "  Батарея: ${cap}%  ·  ${status}"
+      [ -f "$bat/power_now" ] && [ -f "$bat/energy_now" ] && {
+        python3 - "$bat" <<'PY' 2>/dev/null || true
+import sys, os
+b=sys.argv[1]
+try:
+    p=float(open(os.path.join(b,'power_now')).read())
+    e=float(open(os.path.join(b,'energy_now')).read())
+    if p>0:
+        h=e/p
+        print(f"  Осталось примерно: {int(h)}ч {int((h%1)*60)}м")
+except Exception:
+    pass
+PY
+      }
+      echo
+    done
+    if [ "$shown" -eq 0 ]; then
+      gum style --foreground "#7f849c" "  Батарея не обнаружена (настольный ПК?)."
+      echo
+    fi
+
+    if have powerprofilesctl; then
+      local prof
+      prof=$(powerprofilesctl get 2>/dev/null || echo "недоступно")
+      gum style --foreground "#7f849c" "  Профиль питания: ${prof}"
+      echo
+    fi
+
+    local -a opts=("Обновить")
+    if have powerprofilesctl; then
+      opts+=("Профиль: power-saver" "Профиль: balanced" "Профиль: performance")
+    fi
+    opts+=("Открыть меню питания" "Закрыть")
+
+    local c
+    c=$(gum choose --height 12 --header "Действие" "${opts[@]}") || exit 0
+    case "$c" in
+      "Обновить") continue ;;
+      "Профиль: power-saver")   powerprofilesctl set power-saver 2>/dev/null || true ;;
+      "Профиль: balanced")      powerprofilesctl set balanced 2>/dev/null || true ;;
+      "Профиль: performance")   powerprofilesctl set performance 2>/dev/null || true ;;
+      "Открыть меню питания")   [ -x "$SCR/power-menu" ] && "$SCR/power-menu" >/dev/null 2>&1 & ;;
+      "Закрыть"|*) exit 0 ;;
+    esac
+  done
+}
+
+# ── entrypoint ───────────────────────────────────────────────────────────
+main() {
+  local arg="${1:-}"
+  if [ "$arg" = "--internal" ]; then
+    shift
+    load_env
+    case "${1:-}" in
+      clock)   menu_clock ;;
+      audio)   menu_audio ;;
+      network) menu_network ;;
+      battery) menu_battery ;;
+      *) exit 1 ;;
+    esac
+    exit 0
+  fi
+
+  load_env
+  case "$arg" in
+    clock)   toggle_menu "mango-menu-clock" clock ;;
+    audio)   toggle_menu "mango-menu-audio" audio ;;
+    network) toggle_menu "mango-menu-network" network ;;
+    battery) toggle_menu "mango-menu-battery" battery ;;
+    *)
+      echo "Usage: $0 {clock|audio|network|battery}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
