@@ -201,22 +201,23 @@ app_ids = [f"#custom-dock-app-{i}" for i in range(len(apps))]
 app_sel = ",\n".join(app_ids) if app_ids else ""
 
 if autohide:
-    # Автоскрытие: док сдвинут за край, у края остаётся полоска; появляется при наведении
+    # Автоскрытие: вся панель прячется за край экрана, оставляя узкую полоску.
+    # При наведении курсора на эту полоску док выезжает.
     visible_px = 4
     hide_px = max(0, height - visible_px)
 
     if position == "bottom":
         hide_prop = "margin-bottom"
-        mod_margin = "0 6px 2px 6px"
+        mod_margin = "2px 6px"
     elif position == "top":
         hide_prop = "margin-top"
-        mod_margin = "2px 6px 0 6px"
+        mod_margin = "2px 6px"
     elif position == "left":
         hide_prop = "margin-left"
-        mod_margin = "6px 0 6px 2px"
+        mod_margin = "6px 2px"
     else:  # right
         hide_prop = "margin-right"
-        mod_margin = "6px 2px 6px 0"
+        mod_margin = "6px 2px"
 
     css += f"""
 /* Автоскрытие: скрыт за краем, раскрытие при наведении */
