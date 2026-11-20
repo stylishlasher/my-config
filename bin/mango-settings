@@ -768,11 +768,11 @@ menu_apps() {
 }
 
 dock_apply() {
-  # перегенерировать и применить, если док запущен или включён автозапуском в этой сессии
+  # перегенерировать и применить; перезапуск дока в фоне, чтобы не ломать UI настроек
   if [ -x "$SCR/dock" ]; then
     "$SCR/dock" generate >/dev/null 2>&1 || true
     if pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; then
-      "$SCR/dock" restart >/dev/null 2>&1 || true
+      "$SCR/dock" restart >/dev/null 2>&1 &
     fi
   fi
 }
