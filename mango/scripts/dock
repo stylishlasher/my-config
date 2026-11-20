@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Настраиваемый док (Waybar) для MangoWC
-# dock start|stop|restart|toggle|status|generate|enable|disable
+# dock start|stop|restart|toggle|status|generate|restyle|enable|disable
 set -euo pipefail
 
 CFG="$HOME/.config/waybar/dock.jsonc"
 CSS="$HOME/.config/waybar/dock.css"
 ENVF="$HOME/.config/mango/settings.env"
 APPS="$HOME/.config/mango/dock-apps.list"
-PID_PATTERN="waybar.*dock.jsonc"
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/mango-dock.pid"
 
 # defaults
 DOCK_ENABLED=0
@@ -31,11 +31,41 @@ load_env() {
   fi
 }
 
-is_running() { pgrep -f "$PID_PATTERN" >/dev/null 2>&1; }
+dock_pid() {
+  [ -f "$PIDFILE" ] || return 1
+  local p
+  p=$(cat "$PIDFILE" 2>/dev/null || true)
+  [[ "$p" =~ ^[0-9]+$ ]] || { rm -f "$PIDFILE"; return 1; }
+  kill -0 "$p" 2>/dev/null || { rm -f "$PIDFILE"; return 1; }
+  # Убедиться, что это именно waybar дока (защита от переиспользованного PID)
+  if [ -r "/proc/$p/cmdline" ] && tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -Fq "dock.jsonc"; then
+    printf '%s\n' "$p"
+    return 0
+  fi
+  # Fallback для систем без /proc: доверяем PID-файлу, если процесс жив
+  if [ ! -r "/proc/$p/cmdline" ]; then
+    printf '%s\n' "$p"
+    return 0
+  fi
+  rm -f "$PIDFILE"
+  return 1
+}
+
+is_running() { dock_pid >/dev/null 2>&1; }
 
 stop_dock() {
-  pkill -f "$PID_PATTERN" >/dev/null 2>&1 || true
-  sleep 0.15
+  local p
+  if p=$(dock_pid 2>/dev/null); then
+    kill "$p" >/dev/null 2>&1 || true
+    # дождаться завершения (коротко)
+    for _ in 1 2 3 4 5; do
+      kill -0 "$p" 2>/dev/null || break
+      sleep 0.05
+    done
+  fi
+  rm -f "$PIDFILE"
+  # подстраховка от осиротевшего старого процесса дока (точное совпадение бинаря waybar)
+  pkill -x -f 'waybar .*dock\.jsonc' >/dev/null 2>&1 || true
 }
 
 ensure_apps_file() {
@@ -290,11 +320,19 @@ start_dock() {
   fi
   load_env
   generate_dock
-  if is_running; then
-    stop_dock
+  stop_dock
+  nohup waybar -c "$CFG" -s "$CSS" >/dev/null 2>&1 </dev/null &
+  local pid=$!
+  disown "$pid" 2>/dev/null || true
+  printf '%s\n' "$pid" > "$PIDFILE"
+}
+
+restyle_dock() {
+  generate_dock
+  local p
+  if p=$(dock_pid 2>/dev/null); then
+    kill -USR2 "$p" >/dev/null 2>&1 || true
   fi
-  nohup waybar -c "$CFG" -s "$CSS" >/dev/null 2>&1 &
-  disown || true
 }
 
 toggle_dock() {
@@ -315,6 +353,7 @@ case "${1:-}" in
   restart)  start_dock ;;
   toggle)   toggle_dock ;;
   generate) generate_dock ;;
+  restyle)  restyle_dock ;;
   status)   status_dock ;;
   enable)
     load_env
@@ -337,7 +376,7 @@ case "${1:-}" in
     if command -v flock >/dev/null 2>&1; then flock -u 9 2>/dev/null || true; exec 9>&- 2>/dev/null || true; fi
     stop_dock ;;
   *)
-    echo "Usage: $0 {start|stop|restart|toggle|status|generate|enable|disable}" >&2
+    echo "Usage: $0 {start|stop|restart|toggle|status|generate|restyle|enable|disable}" >&2
     exit 1
     ;;
 esac

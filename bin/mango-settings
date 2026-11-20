@@ -768,20 +768,31 @@ menu_apps() {
 }
 
 dock_generate() {
-  # Только перегенерировать конфиг/стили, без перезапуска (безопасно во время работы TUI)
+  # Только перегенерировать конфиг/стили, без перезапуска
+  [ -x "$SCR/dock" ] && "$SCR/dock" generate >/dev/null 2>&1 || true
+}
+
+dock_restyle() {
+  # Живая перегрузка CSS (SIGUSR2), без рестарта и без рефлоу exclusive-зоны
+  [ -x "$SCR/dock" ] && "$SCR/dock" restyle >/dev/null 2>&1 || true
+}
+
+dock_restart_detached() {
+  # Отложенный/отвязанный рестарт: нужен для изменений конфига (позиция, exclusive, слой и т.д.)
+  [ -x "$SCR/dock" ] || return 0
   if [ -x "$SCR/dock" ]; then
-    "$SCR/dock" generate >/dev/null 2>&1 || true
+    if "$SCR/dock" status 2>/dev/null | grep -q '^running$'; then
+      setsid nohup "$SCR/dock" restart >/dev/null 2>&1 </dev/null &
+    fi
   fi
 }
 
 dock_apply() {
-  # Перегенерировать и перезапустить запущенный док (для явного применения)
-  if [ -x "$SCR/dock" ]; then
-    "$SCR/dock" generate >/dev/null 2>&1 || true
-    if pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; then
-      "$SCR/dock" restart >/dev/null 2>&1 || true
-      sleep 0.1
-    fi
+  # Явное применение: регенерация и отвязанный рестарт запущенного дока
+  [ -x "$SCR/dock" ] || return 0
+  "$SCR/dock" generate >/dev/null 2>&1 || true
+  if "$SCR/dock" status 2>/dev/null | grep -q '^running$'; then
+    setsid nohup "$SCR/dock" restart >/dev/null 2>&1 </dev/null &
   fi
 }
 
@@ -793,7 +804,9 @@ dock_toggle_runtime() {
   fi
 }
 
-dock_is_running() { pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; }
+dock_is_running() {
+  [ -x "$SCR/dock" ] && "$SCR/dock" status 2>/dev/null | grep -q '^running$'
+}
 
 dock_default_apps() {
   mkdir -p "$(dirname "$DOCK_APPS")"
@@ -820,17 +833,17 @@ menu_dock_apps() {
 
     local c
     if [ ${#labels[@]} -eq 0 ]; then
-      c=$(pick "Закреплённые приложения дока (пусто)" "Добавить приложение" "Восстановить по умолчанию" "Редактировать файл вручную" "Назад") || return
+      c=$(pick "Закреплённые приложения дока (пусто)" "Добавить приложение" "Восстановить по умолчанию" "Редактировать файл вручную" "Назад") || return 1
     else
-      c=$(pick "Закреплённые приложения дока" "${labels[@]}" "Добавить приложение" "Удалить приложение" "Восстановить по умолчанию" "Редактировать файл вручную" "Назад") || return
+      c=$(pick "Закреплённые приложения дока" "${labels[@]}" "Добавить приложение" "Удалить приложение" "Восстановить по умолчанию" "Редактировать файл вручную" "Назад") || return 1
     fi
 
     case "$c" in
-      "Назад") return;;
+      "Назад") return 1;;
       "Восстановить по умолчанию")
-        dock_default_apps; dock_generate; msg "Список приложений сброшен";;
+        dock_default_apps; dock_generate; msg "Список приложений сброшен"; return 0;;
       "Редактировать файл вручную")
-        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; msg "Сохранено";;
+        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; msg "Сохранено"; return 0;;
       "Добавить приложение")
         local cmd icon name
         cmd=$(ask "Команда запуска (напр. firefox или ~/.config/mango/scripts/launch terminal)") || continue
@@ -838,7 +851,7 @@ menu_dock_apps() {
         icon=$(ask "Иконка Nerd Font (напр.  или 󰈹)" "") || continue
         name=$(ask "Название (подсказка)" "$cmd") || continue
         printf '%s|%s|%s\n' "$cmd" "$icon" "$name" >> "$DOCK_APPS"
-        dock_generate; msg "Добавлено: $name";;
+        dock_generate; msg "Добавлено: $name"; return 0;;
       "Удалить приложение")
         [ ${#labels[@]} -eq 0 ] && { err "Нечего удалять"; continue; }
         local sel; sel=$(pick "Что удалить?" "${labels[@]}") || continue
@@ -857,7 +870,7 @@ menu_dock_apps() {
           echo "$line" >> "$tmp"; out_i=$((out_i+1))
         done < "$DOCK_APPS"
         mv "$tmp" "$DOCK_APPS"
-        dock_generate; msg "Удалено";;
+        dock_generate; msg "Удалено"; return 0;;
       *)
         # tap on existing entry -> quick actions
         local sel="$c" idx=-1 i
@@ -882,7 +895,7 @@ menu_dock_apps() {
               fi
               out_i=$((out_i+1))
             done < "$DOCK_APPS"
-            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Изменено";;
+            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Изменено"; return 0;;
           "Удалить")
             local tmp="$DOCK_APPS.tmp"; : > "$tmp"; local out_i=0
             while IFS= read -r line || [ -n "$line" ]; do
@@ -892,7 +905,7 @@ menu_dock_apps() {
               [ "$out_i" -eq "$idx" ] || echo "$line" >> "$tmp"
               out_i=$((out_i+1))
             done < "$DOCK_APPS"
-            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Удалено";;
+            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Удалено"; return 0;;
         esac
         ;;
     esac
@@ -902,14 +915,10 @@ menu_dock_apps() {
 menu_dock() {
   local dock_needs_restart=0
   dock_apply_pending() {
-    if [ "${dock_needs_restart:-0}" = 1 ] && [ -x "$SCR/dock" ]; then
-      "$SCR/dock" generate >/dev/null 2>&1 || true
-      if pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; then
-        "$SCR/dock" restart >/dev/null 2>&1 || true
-        # Перезапуск дока меняет exclusive-зону/слои и может ломать TUI — дать время и сбросить терминал
-        sleep 0.2
-        printf '\033c' 2>/dev/null || clear 2>/dev/null || true
-      fi
+    # Применить отложенные изменения конфига (position/exclusive/layer/height/taskbar/apps и т.д.)
+    # Перезапуск меняет exclusive-зону и может вызывать рефлоу — делаем detached и без \033c.
+    if [ "${dock_needs_restart:-0}" = 1 ]; then
+      dock_restart_detached
       dock_needs_restart=0
     fi
   }
@@ -947,18 +956,15 @@ menu_dock() {
         if [ "${DOCK_ENABLED:-0}" = "1" ]; then
           set_env DOCK_ENABLED 0; msg "Автозапуск дока выключен"
         else
-          set_env DOCK_ENABLED 1; msg "Автозапуск дока включён"
-          dock_generate; [ -x "$SCR/dock" ] && "$SCR/dock" start >/dev/null 2>&1 || true
+          set_env DOCK_ENABLED 1
+          msg "Автозапуск дока включён"
+          [ -x "$SCR/dock" ] && "$SCR/dock" start >/dev/null 2>&1 || true
         fi;;
       "Режим: закреплён / ниже ("*")")
         v=$(pick "Режим дока" "Закреплён (всегда виден, с отступом)" "Ниже (у края экрана, всегда виден)") || continue
         case "$v" in
-          "Ниже"*)
-            set_env DOCK_AUTOHIDE 1
-            msg "Док будет у самого края экрана (ниже)";;
-          *)
-            set_env DOCK_AUTOHIDE 0
-            msg "Док закреплён (с отступом)";;
+          "Ниже"*) set_env DOCK_AUTOHIDE 1; msg "Док будет у самого края экрана (ниже)";;
+          *)       set_env DOCK_AUTOHIDE 0; msg "Док закреплён (с отступом)";;
         esac
         dock_generate; dock_needs_restart=1;;
       "Положение ("*")")
@@ -975,11 +981,13 @@ menu_dock() {
         v=$(pick "Отступ, px" 0 4 6 8 10 12 16 20 24) || continue
         set_env DOCK_MARGIN "$v"; dock_generate; dock_needs_restart=1; msg "Отступ: $v";;
       "Скругление ("*")")
+        # CSS-only: живая перегрузка без рестарта/рефлоу
         v=$(pick "Радиус, px" 0 8 12 16 20 24 28 32) || continue
-        set_env DOCK_RADIUS "$v"; dock_generate; dock_needs_restart=1; msg "Скругление: $v";;
+        set_env DOCK_RADIUS "$v"; dock_restyle; msg "Скругление: $v";;
       "Прозрачность фона ("*")")
+        # CSS-only: живая перегрузка без рестарта/рефлоу
         v=$(pick "Непрозрачность фона" 0.0 0.35 0.5 0.65 0.78 0.85 0.92 1.0) || continue
-        set_env DOCK_BG_OPACITY "$v"; dock_generate; dock_needs_restart=1; msg "Прозрачность: $v";;
+        set_env DOCK_BG_OPACITY "$v"; dock_restyle; msg "Прозрачность: $v";;
       "Слой ("*")")
         v=$(pick "Слой" top overlay bottom) || continue
         set_env DOCK_LAYER "$v"; dock_generate; dock_needs_restart=1; msg "Слой: $v";;
@@ -989,23 +997,26 @@ menu_dock() {
       "Резервировать место под док: вкл/выкл ("*")")
         if [ "${DOCK_EXCLUSIVE:-0}" = "1" ]; then set_env DOCK_EXCLUSIVE 0; else set_env DOCK_EXCLUSIVE 1; fi
         dock_generate; dock_needs_restart=1; msg "Обновлено";;
-      "Закреплённые приложения…") menu_dock_apps; dock_needs_restart=1;;
+      "Закреплённые приложения…")
+        if menu_dock_apps; then
+          dock_needs_restart=1
+        fi;;
       "Применить/перезапустить док")
         if [ -x "$SCR/dock" ]; then
-          "$SCR/dock" generate >/dev/null 2>&1 || true
-          "$SCR/dock" restart >/dev/null 2>&1 || "$SCR/dock" start >/dev/null 2>&1 || true
+          dock_apply
           dock_needs_restart=0
-          sleep 0.2
-          printf '\033c' 2>/dev/null || clear 2>/dev/null || true
-          msg "Док применён"
+          msg "Док применён (перезапуск в фоне)"
         else
           err "Нет скрипта дока"
         fi;;
       "Перегенерировать конфиг дока")
-        if [ -x "$SCR/dock" ]; then "$SCR/dock" generate >/dev/null 2>&1 || true; msg "Конфиг дока сгенерирован"; else err "Нет скрипта дока"; fi;;
-      "Редактировать dock.jsonc") ${EDITOR:-nano} "$DOCK_CFG"; dock_generate; dock_needs_restart=1;;
-      "Редактировать dock.css") ${EDITOR:-nano} "$DOCK_CSS"; dock_generate; dock_needs_restart=1;;
-      "Редактировать dock-apps.list") ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_needs_restart=1;;
+        dock_generate; msg "Конфиг дока сгенерирован";;
+      "Редактировать dock.jsonc")
+        ${EDITOR:-nano} "$DOCK_CFG"; dock_generate; dock_needs_restart=1;;
+      "Редактировать dock.css")
+        ${EDITOR:-nano} "$DOCK_CSS"; dock_restyle;;
+      "Редактировать dock-apps.list")
+        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_needs_restart=1;;
     esac
   done
 }
@@ -1019,7 +1030,7 @@ menu_files() {
     "launch")       ${EDITOR:-nano} "$SCR/launch";;
     "power-menu")   ${EDITOR:-nano} "$SCR/power-menu";;
     "dock (скрипт)") ${EDITOR:-nano} "$SCR/dock";;
-    "dock-apps.list") ${EDITOR:-nano} "$DOCK_APPS"; dock_apply;;
+    "dock-apps.list") ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_restart_detached;;
   esac
 }
 
