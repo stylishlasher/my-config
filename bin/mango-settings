@@ -23,7 +23,7 @@ load_env() {
   # Док
   DOCK_ENABLED=0; DOCK_POSITION=bottom; DOCK_ICON_SIZE=26; DOCK_HEIGHT=48
   DOCK_MARGIN=8; DOCK_LAYER=top; DOCK_EXCLUSIVE=0; DOCK_BG_OPACITY=0.78
-  DOCK_RADIUS=20; DOCK_SHOW_TASKBAR=1
+  DOCK_RADIUS=20; DOCK_SHOW_TASKBAR=1; DOCK_AUTOHIDE=0
   [ -f "$ENVF" ] && . "$ENVF"
   # Совместимость: COLOR_MODE приоритетнее MATUGEN
   if [ "${COLOR_MODE:-}" = "manual" ]; then MATUGEN=0; else MATUGEN=1; COLOR_MODE=matugen; fi
@@ -310,40 +310,50 @@ wb_get_modules() {  # left|center|right → список через пробел
 import json,sys,re
 p='$WB/config.jsonc'
 try:
-  with open(p) as f: t=f.read()
-  t=re.sub(r'//.*','',t)
-  d=json.loads(t)
+  with open(p, encoding='utf-8') as f: t=f.read()
+  d=None
+  for cand in (re.sub(r'//.*','',t), t):
+    try:
+      d=json.loads(cand); break
+    except Exception:
+      d=None
+  if d is None:
+    raise ValueError('parse failed')
   key='modules-'+sys.argv[1]
-  print(' '.join(d.get(key,[])))
-except Exception as e:
-  print('', file=sys.stderr); sys.exit(1)
+  mods=d.get(key,[])
+  if isinstance(mods, list):
+    print(' '.join(str(x) for x in mods))
+  else:
+    print('')
+except Exception:
+  sys.exit(1)
 " "$1" 2>/dev/null
 }
 
 wb_module_defaults() {
   case "$1" in
     backlight) cat <<'JSON'
-{"format":"{icon} {percent}%","format-icons":["󰃞","󰃟","󰃠"],"on-scroll-up":"brightnessctl set 5%+","on-scroll-down":"brightnessctl set 5%-"}
+{"format":"{icon} {percent}%","format-icons":["󰃞","󰃟","󰃠"],"tooltip-format":"Яркость: {percent}%","on-scroll-up":"brightnessctl set 5%+","on-scroll-down":"brightnessctl set 5%-"}
 JSON
 ;;
     bluetooth) cat <<'JSON'
-{"format":"󰂯","format-connected":"󰂱 {num_connections}","format-disabled":"󰂲","tooltip-format":"{controller_alias}\t{controller_address}","on-click":"blueman-manager"}
+{"format":"󰂯","format-disabled":"󰂲","format-off":"󰂲","format-on":"󰂯","format-connected":"󰂱 {num_connections}","format-connected-battery":"󰂱 {device_battery_percentage}%","tooltip-format":"Bluetooth: {status}","tooltip-format-connected":"Bluetooth: подключено ({num_connections})\n{device_enumerate}","tooltip-format-enumerate-connected":"• {device_alias}","tooltip-format-enumerate-connected-battery":"• {device_alias} — {device_battery_percentage}%","on-click":"blueman-manager"}
 JSON
 ;;
     mpris) cat <<'JSON'
-{"format":"{player_icon} {dynamic}","format-paused":"{status_icon} <i>{dynamic}</i>","player-icons":{"default":"▶","mpv":"🎵"},"status-icons":{"paused":"⏸"},"max-length":30}
+{"format":"{player_icon} {dynamic}","format-paused":"{status_icon} {dynamic}","player-icons":{"default":"▶","spotify":"󰓇","mpv":"󰎆","firefox":"󰈹"},"status-icons":{"paused":"⏸"},"dynamic-order":["title","artist"],"max-length":28,"tooltip-format":"{player}: {dynamic}"}
 JSON
 ;;
     idle_inhibitor) cat <<'JSON'
-{"format":"{icon}","format-icons":{"activated":"󰅶","deactivated":"󰾪"},"tooltip-format-activated":"Антисон: вкл","tooltip-format-deactivated":"Антисон: выкл"}
+{"format":"{icon}","format-icons":{"activated":"󰅶","deactivated":"󰾪"},"tooltip-format-activated":"Антисон: включён","tooltip-format-deactivated":"Антисон: выключен"}
 JSON
 ;;
     temperature) cat <<'JSON'
-{"format":" {temperatureC}°C","critical-threshold":80,"format-critical":" {temperatureC}°C"}
+{"format":" {temperatureC}°C","critical-threshold":80,"format-critical":" {temperatureC}°C","tooltip-format":"Температура: {temperatureC}°C"}
 JSON
 ;;
     disk) cat <<'JSON'
-{"format":"󰋊 {percentage_used}%","path":"/","tooltip-format":"{used} / {total}"}
+{"format":"󰋊 {percentage_used}%","path":"/","tooltip-format":"Диск: {used} / {total} ({percentage_used}%)"}
 JSON
 ;;
     cpu) cat <<'JSON'
@@ -363,21 +373,41 @@ JSON
 
 wb_ensure_module_def() {
   local mid="$1"
-  local def; def=$(wb_module_defaults "$mid")
-  [ -z "$def" ] && return 0
-  python3 - "$WB/config.jsonc" "$mid" "$def" <<'PY'
+  local default_def; default_def=$(wb_module_defaults "$mid")
+  [ -z "$default_def" ] && return 0
+  python3 - "$WB/config.jsonc" "$mid" "$default_def" <<'PY'
 import json,sys,re
-p, mid, def = sys.argv[1], sys.argv[2], sys.argv[3]
-with open(p) as f: t=f.read()
-clean=re.sub(r'//.*','',t)
-d=json.loads(clean)
-if mid not in d:
-  try:
-    d[mid]=json.loads(def)
-  except Exception:
+p, mid, default_def = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    with open(p, encoding='utf-8') as f:
+        t = f.read()
+except Exception:
+    sys.exit(0)
+
+# Best-effort parse (strip // comments). File is normally rewritten as plain JSON.
+for candidate in (re.sub(r'//.*', '', t), t):
+    try:
+        d = json.loads(candidate)
+        break
+    except Exception:
+        d = None
+if d is None or not isinstance(d, dict):
+    sys.exit(0)
+
+if mid in d:
+    sys.exit(0)
+
+try:
+    d[mid] = json.loads(default_def)
+except Exception:
+    sys.exit(0)
+
+try:
+    with open(p, 'w', encoding='utf-8') as f:
+        json.dump(d, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+except Exception:
     pass
-  with open(p,'w') as f:
-    json.dump(d,f,indent=2,ensure_ascii=False); f.write('\n')
 PY
 }
 
@@ -390,14 +420,31 @@ wb_set_modules() {  # left|center|right  list...
   python3 - "$WB/config.jsonc" "$side" "$mods" <<'PY'
 import json,sys,re
 p, side, mods = sys.argv[1], sys.argv[2], sys.argv[3]
-with open(p) as f: t=f.read()
-clean=re.sub(r'//.*','',t)
-d=json.loads(clean)
-key='modules-'+side
-d[key]=mods.split() if mods.strip() else []
-with open(p,'w') as f:
-  json.dump(d,f,indent=2,ensure_ascii=False)
-  f.write('\n')
+try:
+    with open(p, encoding='utf-8') as f:
+        t = f.read()
+except Exception:
+    sys.exit(1)
+
+d = None
+for candidate in (re.sub(r'//.*', '', t), t):
+    try:
+        d = json.loads(candidate)
+        break
+    except Exception:
+        d = None
+if d is None or not isinstance(d, dict):
+    sys.exit(1)
+
+key = 'modules-' + side
+d[key] = mods.split() if mods and mods.strip() else []
+
+try:
+    with open(p, 'w', encoding='utf-8') as f:
+        json.dump(d, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+except Exception:
+    sys.exit(1)
 PY
 }
 
@@ -558,28 +605,53 @@ menu_matugen() {
   case "$c" in
     "Включить режим Matugen (цвета из обоев)")
       set_env COLOR_MODE matugen; set_env MATUGEN 1
-      msg "Режим Matugen включён"
-      "$SCR/wallpaper" matugen >/dev/null 2>&1 || true;;
+      COLOR_MODE=matugen; MATUGEN=1
+      if "$SCR/wallpaper" matugen >/dev/null 2>&1; then
+        msg "Режим Matugen включён, цвета обновлены"
+      else
+        msg "Режим Matugen включён (поставьте обои, чтобы сгенерировать цвета)"
+      fi;;
     "Выключить Matugen (ручной акцент)")
       set_env COLOR_MODE manual; set_env MATUGEN 0
+      COLOR_MODE=manual; MATUGEN=0
       msg "Matugen выключен, используется ручной акцент";;
     "Сгенерировать сейчас из текущих обоев")
-      if ! command -v matugen >/dev/null; then err "Установите matugen (AUR: matugen-bin)"; return; fi
+      if ! command -v matugen >/dev/null 2>&1; then err "Установите matugen (AUR: matugen-bin)"; return; fi
       set_env COLOR_MODE matugen; set_env MATUGEN 1
-      "$SCR/wallpaper" matugen && msg "Цвета обновлены" || err "Нет обоев или ошибка matugen";;
+      COLOR_MODE=matugen; MATUGEN=1
+      if "$SCR/wallpaper" matugen >/dev/null 2>&1; then
+        msg "Цвета обновлены из обоев"
+      else
+        err "Не удалось: выберите обои (Super+W) или проверьте matugen"
+      fi;;
     "Режим: dark / light")
       v=$(pick "Режим (сейчас: ${MATUGEN_MODE:-dark})" dark light) || return
-      set_env MATUGEN_MODE "$v"; msg "Режим: $v";;
+      set_env MATUGEN_MODE "$v"; MATUGEN_MODE="$v"
+      if [ "${COLOR_MODE:-matugen}" = "matugen" ] && [ -n "${WALLPAPER:-}" ] && [ -f "${WALLPAPER:-}" ] && command -v matugen >/dev/null 2>&1; then
+        "$SCR/wallpaper" matugen >/dev/null 2>&1 && msg "Режим: $v (цвета обновлены)" || msg "Режим: $v"
+      else
+        msg "Режим: $v"
+      fi;;
     "Тип схемы")
       v=$(pick "Тип схемы (пусто = tonal-spot)" \
         "scheme-tonal-spot" "scheme-content" "scheme-expressive" "scheme-fidelity" \
         "scheme-fruit-salad" "scheme-monochrome" "scheme-neutral" "scheme-rainbow" "scheme-vibrant" \
         "(сбросить)") || return
       [ "$v" = "(сбросить)" ] && v=""
-      set_env MATUGEN_TYPE "$v"; msg "Тип: ${v:-по умолчанию}";;
+      set_env MATUGEN_TYPE "$v"; MATUGEN_TYPE="$v"
+      if [ "${COLOR_MODE:-matugen}" = "matugen" ] && [ -n "${WALLPAPER:-}" ] && [ -f "${WALLPAPER:-}" ] && command -v matugen >/dev/null 2>&1; then
+        "$SCR/wallpaper" matugen >/dev/null 2>&1 && msg "Тип: ${v:-по умолчанию} (цвета обновлены)" || msg "Тип: ${v:-по умолчанию}"
+      else
+        msg "Тип: ${v:-по умолчанию}"
+      fi;;
     "Контраст (−1 … 1)")
       v=$(ask "число от -1 до 1" "${MATUGEN_CONTRAST:-0}") || return
-      set_env MATUGEN_CONTRAST "$v"; msg "Контраст: $v";;
+      set_env MATUGEN_CONTRAST "$v"; MATUGEN_CONTRAST="$v"
+      if [ "${COLOR_MODE:-matugen}" = "matugen" ] && [ -n "${WALLPAPER:-}" ] && [ -f "${WALLPAPER:-}" ] && command -v matugen >/dev/null 2>&1; then
+        "$SCR/wallpaper" matugen >/dev/null 2>&1 && msg "Контраст: $v (цвета обновлены)" || msg "Контраст: $v"
+      else
+        msg "Контраст: $v"
+      fi;;
   esac
 }
 
@@ -807,9 +879,11 @@ menu_dock() {
     local en_state="выкл"; [ "${DOCK_ENABLED:-0}" = "1" ] && en_state="вкл"
     local task_state="выкл"; [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ] && task_state="вкл"
     local ex_state="нет"; [ "${DOCK_EXCLUSIVE:-0}" = "1" ] && ex_state="да"
-    local c; c=$(pick "Док (Waybar)  ·  автозапуск: $en_state  ·  сейчас: $run_state" \
+    local ah_state="закреплён"; [ "${DOCK_AUTOHIDE:-0}" = "1" ] && ah_state="автоскрытие"
+    local c; c=$(pick "Док (Waybar)  ·  $ah_state  ·  автозапуск: $en_state  ·  сейчас: $run_state" \
       "Показать/скрыть док сейчас" \
       "Автозапуск дока: вкл/выкл ($en_state)" \
+      "Режим: закреплён / автоскрытие ($ah_state)" \
       "Положение (${DOCK_POSITION:-bottom})" \
       "Размер иконок (${DOCK_ICON_SIZE:-26})" \
       "Высота/толщина дока (${DOCK_HEIGHT:-48})" \
@@ -835,6 +909,18 @@ menu_dock() {
           set_env DOCK_ENABLED 1; msg "Автозапуск дока включён"
           dock_apply; [ -x "$SCR/dock" ] && "$SCR/dock" start >/dev/null 2>&1 || true
         fi;;
+      "Режим: закреплён / автоскрытие ("*")")
+        v=$(pick "Режим дока" "Закреплён (всегда виден)" "Автоскрытие (появляется при наведении на край)") || continue
+        case "$v" in
+          "Автоскрытие"*)
+            set_env DOCK_AUTOHIDE 1
+            set_env DOCK_EXCLUSIVE 0
+            msg "Автоскрытие: док появится при наведении на край экрана";;
+          *)
+            set_env DOCK_AUTOHIDE 0
+            msg "Док закреплён (всегда виден)";;
+        esac
+        dock_apply;;
       "Положение ("*")")
         v=$(pick "Положение дока" bottom top left right) || continue
         set_env DOCK_POSITION "$v"; dock_apply; msg "Положение: $v";;
@@ -845,6 +931,7 @@ menu_dock() {
         v=$(pick "Высота/толщина, px" 36 40 44 48 52 56 64 72) || continue
         set_env DOCK_HEIGHT "$v"; dock_apply; msg "Высота: $v";;
       "Отступ от края ("*")")
+        if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме автоскрытия отступ не используется"; continue; fi
         v=$(pick "Отступ, px" 0 4 6 8 10 12 16 20 24) || continue
         set_env DOCK_MARGIN "$v"; dock_apply; msg "Отступ: $v";;
       "Скругление ("*")")
@@ -860,6 +947,7 @@ menu_dock() {
         if [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ]; then set_env DOCK_SHOW_TASKBAR 0; else set_env DOCK_SHOW_TASKBAR 1; fi
         dock_apply; msg "Обновлено";;
       "Резервировать место под док: вкл/выкл ("*")")
+        if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме автоскрытия место не резервируется"; continue; fi
         if [ "${DOCK_EXCLUSIVE:-0}" = "1" ]; then set_env DOCK_EXCLUSIVE 0; else set_env DOCK_EXCLUSIVE 1; fi
         dock_apply; msg "Обновлено";;
       "Закреплённые приложения…") menu_dock_apps;;

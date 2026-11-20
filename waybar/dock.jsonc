@@ -2,9 +2,13 @@
   "layer": "top",
   "position": "bottom",
   "exclusive": false,
-  "height": 48,
+  "passthrough": false,
+  "gtk-layer-shell": true,
   "spacing": 6,
+  "margin-top": 0,
   "margin-bottom": 8,
+  "margin-left": 0,
+  "margin-right": 0,
   "modules-left": [],
   "modules-center": [
     "custom/dock-app-0",
@@ -15,28 +19,33 @@
     "wlr/taskbar"
   ],
   "modules-right": [],
+  "height": 48,
   "custom/dock-app-0": {
     "format": "",
+    "tooltip": true,
     "tooltip-format": "Терминал",
     "on-click": "~/.config/mango/scripts/launch terminal"
   },
   "custom/dock-app-1": {
     "format": "",
+    "tooltip": true,
     "tooltip-format": "Файлы",
     "on-click": "~/.config/mango/scripts/launch files"
   },
   "custom/dock-app-2": {
     "format": "󰈹",
+    "tooltip": true,
     "tooltip-format": "Браузер",
     "on-click": "~/.config/mango/scripts/launch browser"
   },
   "custom/dock-app-3": {
     "format": "󰒓",
+    "tooltip": true,
     "tooltip-format": "Настройки",
     "on-click": "~/.config/mango/scripts/launch settings"
   },
   "custom/dock-sep": {
-    "format": "|",
+    "format": "│",
     "tooltip": false
   },
   "wlr/taskbar": {
@@ -47,6 +56,10 @@
     "on-click": "activate",
     "on-click-middle": "close",
     "on-click-right": "minimize",
-    "all-outputs": false
+    "all-outputs": false,
+    "ignore-list": [
+      "mango-settings",
+      "mango-nmtui"
+    ]
   }
 }

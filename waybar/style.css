@@ -33,6 +33,12 @@ tooltip label { color: @text; }
 #tray,
 #cpu,
 #memory,
+#backlight,
+#bluetooth,
+#mpris,
+#idle_inhibitor,
+#temperature,
+#disk,
 #custom-settings,
 #custom-power {
   background: @pill;
@@ -117,9 +123,41 @@ tooltip label { color: @text; }
 
 #pulseaudio:hover,
 #network:hover,
-#battery:hover {
+#battery:hover,
+#cpu:hover,
+#memory:hover,
+#backlight:hover,
+#bluetooth:hover,
+#mpris:hover,
+#idle_inhibitor:hover,
+#temperature:hover,
+#disk:hover {
   background: alpha(@accent, 0.2);
 }
+
+#cpu { color: @blue; }
+#memory { color: @pink; }
+#backlight { color: @yellow; }
+
+#bluetooth { color: @blue; }
+#bluetooth.disabled,
+#bluetooth.off {
+  color: @subtle;
+}
+#bluetooth.connected {
+  color: @teal;
+}
+
+#mpris { color: @green; }
+#mpris.paused { color: @subtle; }
+
+#idle_inhibitor { color: @subtle; }
+#idle_inhibitor.activated { color: @peach; }
+
+#temperature { color: @peach; }
+#temperature.critical { color: @red; }
+
+#disk { color: @teal; }
 
 #custom-settings { color: @text; }
 #custom-settings:hover {

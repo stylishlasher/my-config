@@ -5,12 +5,16 @@
 # wallpaper color HEX     — однотонный фон
 # wallpaper mode РЕЖИМ    — fill | fit | stretch | center | tile
 # wallpaper matugen       — сгенерировать цвета из текущих обоев
+set -uo pipefail
+
 ENVF="$HOME/.config/mango/settings.env"
+WB_COLORS="$HOME/.config/waybar/colors.css"
+MATUGEN_CFG="${XDG_CONFIG_HOME:-$HOME/.config}/matugen/config.toml"
 [ -f "$ENVF" ] && . "$ENVF"
 
 set_env() {  # КЛЮЧ ЗНАЧЕНИЕ — переписать одну строку в settings.env
   touch "$ENVF"
-  grep -v "^$1=" "$ENVF" > "$ENVF.tmp"
+  grep -v "^$1=" "$ENVF" > "$ENVF.tmp" 2>/dev/null || true
   printf '%s=%q\n' "$1" "$2" >> "$ENVF.tmp"
   mv "$ENVF.tmp" "$ENVF"
 }
@@ -22,62 +26,145 @@ find_images() {
     \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.bmp' \) 2>/dev/null
 }
 
-notify() { command -v notify-send >/dev/null && notify-send -t 1800 "Обои" "$1" 2>/dev/null; }
+notify() { command -v notify-send >/dev/null 2>&1 && notify-send -t 2200 "Обои" "$1" 2>/dev/null || true; }
+
+# Сохраняет пользовательскую прозрачность панели/таблеток после генерации matugen
+apply_saved_bar_opacity() {
+  [ -f "$WB_COLORS" ] || return 0
+  local bar_a="${BAR_OPACITY:-0.65}"
+  local pill_a="${PILL_OPACITY:-0.55}"
+  # Подстрахуемся: matugen мог выставить фиксированные альфы в шаблоне
+  if grep -q '^@define-color bar_bg rgba' "$WB_COLORS"; then
+    sed -i -E "s|^(@define-color bar_bg rgba\([0-9]+, [0-9]+, [0-9]+, )[0-9.]+\)|\1${bar_a})|" "$WB_COLORS"
+  fi
+  if grep -q '^@define-color pill rgba' "$WB_COLORS"; then
+    sed -i -E "s|^(@define-color pill rgba\([0-9]+, [0-9]+, [0-9]+, )[0-9.]+\)|\1${pill_a})|" "$WB_COLORS"
+  fi
+}
+
+# Matugen шаблоны перезаписывают целые файлы; сохраняем пользовательские настройки foot
+snapshot_ui_prefs() {
+  FOOT_ALPHA=""; FOOT_PAD=""; FOOT_FONT=""
+  local f="${XDG_CONFIG_HOME:-$HOME/.config}/foot/foot.ini"
+  if [ -f "$f" ]; then
+    FOOT_ALPHA=$(grep -m1 '^alpha=' "$f" 2>/dev/null | cut -d= -f2- || true)
+    FOOT_PAD=$(grep -m1 '^pad=' "$f" 2>/dev/null | cut -d= -f2- || true)
+    FOOT_FONT=$(grep -m1 '^font=' "$f" 2>/dev/null | cut -d= -f2- || true)
+  fi
+}
+
+restore_ui_prefs() {
+  local f="${XDG_CONFIG_HOME:-$HOME/.config}/foot/foot.ini"
+  [ -f "$f" ] || return 0
+  [ -n "${FOOT_ALPHA:-}" ] && sed -i "s|^alpha=.*|alpha=${FOOT_ALPHA}|" "$f" 2>/dev/null || true
+  [ -n "${FOOT_PAD:-}" ] && sed -i "s|^pad=.*|pad=${FOOT_PAD}|" "$f" 2>/dev/null || true
+  [ -n "${FOOT_FONT:-}" ] && sed -i "s|^font=.*|font=${FOOT_FONT}|" "$f" 2>/dev/null || true
+}
+
+reload_waybars() {
+  pkill -SIGUSR2 waybar 2>/dev/null || true
+}
 
 run_matugen() {
   # Режим цвета: matugen|manual (COLOR_MODE имеет приоритет, MATUGEN — для совместимости)
-  local mode="${COLOR_MODE:-}"
-  if [ -z "$mode" ]; then
-    [ "${MATUGEN:-1}" = "1" ] && mode="matugen" || mode="manual"
-  fi
-  [ "$mode" = "matugen" ] || return 0
-  command -v matugen >/dev/null 2>&1 || return 0
   local img="$1"
-  [ -n "$img" ] && [ -f "$img" ] || return 0
-  # Конфиг matugen лежит в ~/.config/matugen/config.toml
-  matugen image "$img" -m "${MATUGEN_MODE:-dark}" \
-    ${MATUGEN_TYPE:+-t "$MATUGEN_TYPE"} \
-    --contrast "${MATUGEN_CONTRAST:-0}" \
-    >/dev/null 2>&1 && notify "Matugen: цвета обновлены из обоев" || true
+  local force="${2:-0}"
+  local mode="${COLOR_MODE:-}"
+
+  if [ "$force" != "1" ]; then
+    if [ -z "$mode" ]; then
+      [ "${MATUGEN:-1}" = "1" ] && mode="matugen" || mode="manual"
+    fi
+    [ "$mode" = "matugen" ] || return 0
+  fi
+
+  [ -n "$img" ] && [ -f "$img" ] || { notify "Matugen: нет файла обоев"; return 1; }
+
+  if ! command -v matugen >/dev/null 2>&1; then
+    notify "Matugen не установлен (AUR: matugen-bin)"
+    return 1
+  fi
+
+  # matugen обычно берёт ~/.config/matugen/config.toml автоматически, но укажем явно если есть
+  local -a cmd=(matugen image "$img" -m "${MATUGEN_MODE:-dark}" --contrast "${MATUGEN_CONTRAST:-0}")
+  [ -f "$MATUGEN_CFG" ] && cmd+=(--config "$MATUGEN_CFG")
+  [ -n "${MATUGEN_TYPE:-}" ] && cmd+=(-t "$MATUGEN_TYPE")
+
+  snapshot_ui_prefs
+
+  local log
+  log="$(mktemp -t mango-matugen.XXXXXX 2>/dev/null || echo /tmp/mango-matugen.log)"
+  if "${cmd[@]}" >"$log" 2>&1; then
+    # hook apply-matugen-accent может выполниться чуть позже; на всякий случай фиксируем прозрачность/настройки и обновляем панели
+    restore_ui_prefs
+    apply_saved_bar_opacity
+    reload_waybars
+    if pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; then
+      pkill -SIGUSR2 -f "waybar.*dock.jsonc" 2>/dev/null || true
+    fi
+    # через короткую паузу ещё раз (если post_hook/скрипты успели перезаписать)
+    (
+      sleep 0.5
+      restore_ui_prefs
+      apply_saved_bar_opacity
+      reload_waybars
+      pkill -SIGUSR2 -f "waybar.*dock.jsonc" 2>/dev/null || true
+    ) >/dev/null 2>&1 &
+    notify "Matugen: цвета обновлены из обоев"
+    rm -f "$log" 2>/dev/null || true
+    return 0
+  else
+    notify "Matugen: ошибка генерации (проверь обои/настройки)"
+    rm -f "$log" 2>/dev/null || true
+    return 1
+  fi
 }
 
-case "$1" in
+case "${1:-}" in
   set)
-    [ -f "$2" ] || { echo "нет файла: $2" >&2; exit 1; }
+    [ -f "${2:-}" ] || { echo "нет файла: ${2:-}" >&2; exit 1; }
     set_env WALLPAPER "$(realpath "$2")"; notify "$(basename "$2")"
-    run_matugen "$(realpath "$2")";;
+    # обновить обои и палитру (если включён matugen)
+    [ -f "$ENVF" ] && . "$ENVF"
+    run_matugen "$WALLPAPER" || true
+    ;;
   random)
     f=$(find_images | shuf -n1)
     [ -n "$f" ] || { notify "Картинки не найдены"; exit 1; }
     set_env WALLPAPER "$f"; notify "$(basename "$f")"
-    run_matugen "$f";;
+    [ -f "$ENVF" ] && . "$ENVF"
+    run_matugen "$WALLPAPER" || true
+    ;;
   color)
-    hex="${2#\#}"
+    hex="${2:-}"; hex="${hex#\#}"
     [[ "$hex" =~ ^[0-9a-fA-F]{6}$ ]] || { echo "нужен HEX из 6 символов" >&2; exit 1; }
-    set_env WALLPAPER ""; set_env WALLPAPER_COLOR "$hex";;
+    set_env WALLPAPER ""; set_env WALLPAPER_COLOR "$hex"; notify "Фон: #$hex";;
   mode)
-    set_env WALLPAPER_MODE "$2";;
+    set_env WALLPAPER_MODE "${2:-fill}";;
   clear)
-    set_env WALLPAPER "";;
+    set_env WALLPAPER ""; notify "Однотонный фон";;
   matugen)
     [ -f "$ENVF" ] && . "$ENVF"
-    if [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
-      run_matugen "$WALLPAPER"
+    if [ -n "${WALLPAPER:-}" ] && [ -f "$WALLPAPER" ]; then
+      run_matugen "$WALLPAPER" 1
+      exit $?
     else
-      notify "Нет текущих обоев для matugen"
+      notify "Нет текущих обоев для Matugen"
       exit 1
     fi
-    exit 0;;
+    ;;
 esac
 
+# Перечитать актуальные значения после set_env
 [ -f "$ENVF" ] && . "$ENVF"
-old=$(pgrep -x swaybg)
-if [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ]; then
+
+old=$(pgrep -x swaybg 2>/dev/null || true)
+if [ -n "${WALLPAPER:-}" ] && [ -f "$WALLPAPER" ]; then
   setsid swaybg -i "$WALLPAPER" -m "${WALLPAPER_MODE:-fill}" -c "${WALLPAPER_COLOR:-1e1e2e}" >/dev/null 2>&1 &
 else
   setsid swaybg -c "${WALLPAPER_COLOR:-1e1e2e}" >/dev/null 2>&1 &
 fi
 # старый swaybg убираем после запуска нового — без мигания
 sleep 0.4
-[ -n "$old" ] && kill $old 2>/dev/null
+[ -n "${old:-}" ] && kill $old 2>/dev/null || true
 exit 0

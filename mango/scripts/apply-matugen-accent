@@ -1,28 +1,42 @@
 #!/usr/bin/env bash
 # Применить акцент из matugen (обновляет focus_color и ACCENT в settings.env)
+set -uo pipefail
+
 ENVF="$HOME/.config/mango/settings.env"
 ACCENT_FILE="$HOME/.config/mango/matugen-accent.env"
 CONF="$HOME/.config/mango/config.conf"
 WB="$HOME/.config/waybar"
+WB_COLORS="$WB/colors.css"
 
 [ -f "$ACCENT_FILE" ] || exit 0
 # shellcheck source=/dev/null
 . "$ACCENT_FILE"
-[ -n "$ACCENT" ] || exit 0
+ACCENT="${ACCENT#\#}"
+[[ "$ACCENT" =~ ^[0-9a-fA-F]{6}$ ]] || exit 0
 
-# Записать в settings.env
 touch "$ENVF"
-grep -v "^ACCENT=" "$ENVF" > "$ENVF.tmp"
-printf 'ACCENT=%q\n' "$ACCENT" >> "$ENVF.tmp"
-mv "$ENVF.tmp" "$ENVF"
 
-# Считаем, что применение accent.env означает активный режим Matugen
-grep -v "^MATUGEN=" "$ENVF" 2>/dev/null > "$ENVF.tmp2" || true
-{ cat "$ENVF.tmp2" 2>/dev/null; printf 'MATUGEN=1\n'; } > "$ENVF.tmp"
-mv "$ENVF.tmp" "$ENVF"; rm -f "$ENVF.tmp2"
-grep -v "^COLOR_MODE=" "$ENVF" > "$ENVF.tmp"
-{ cat "$ENVF.tmp"; printf 'COLOR_MODE=matugen\n'; } > "$ENVF.tmp2"
-mv "$ENVF.tmp2" "$ENVF"; rm -f "$ENVF.tmp"
+set_env_kv() {
+  local k="$1" v="$2"
+  grep -v "^${k}=" "$ENVF" > "$ENVF.tmp" 2>/dev/null || true
+  printf '%s=%s\n' "$k" "$v" >> "$ENVF.tmp"
+  mv "$ENVF.tmp" "$ENVF"
+}
+
+# Записать акцент и зафиксировать режим Matugen
+set_env_kv ACCENT "$ACCENT"
+set_env_kv MATUGEN 1
+set_env_kv COLOR_MODE matugen
+
+# Вернуть пользовательскую прозрачность панели/таблеток после генерации matugen
+if [ -f "$WB_COLORS" ]; then
+  # подтянуть BAR_OPACITY/PILL_OPACITY
+  BAR_OPACITY=0.65; PILL_OPACITY=0.55
+  # shellcheck disable=SC1090
+  [ -f "$ENVF" ] && . "$ENVF"
+  sed -i -E "s|^(@define-color bar_bg rgba\([0-9]+, [0-9]+, [0-9]+, )[0-9.]+\)|\1${BAR_OPACITY})|" "$WB_COLORS" 2>/dev/null || true
+  sed -i -E "s|^(@define-color pill rgba\([0-9]+, [0-9]+, [0-9]+, )[0-9.]+\)|\1${PILL_OPACITY})|" "$WB_COLORS" 2>/dev/null || true
+fi
 
 # focus_color в mango
 if grep -q "^focus_color=" "$CONF" 2>/dev/null; then
@@ -36,5 +50,8 @@ if [ -f "$WB/config.jsonc" ]; then
   sed -i "s|color='#[0-9a-fA-F]\{6\}'|color='#${ACCENT}'|" "$WB/config.jsonc"
 fi
 
-# Перезагрузка mango (если доступно)
+# Перезагрузка mango/waybar
 mmsg dispatch reload_config >/dev/null 2>&1 || mmsg -d reload_config >/dev/null 2>&1 || true
+pkill -SIGUSR2 waybar 2>/dev/null || true
+pkill -SIGUSR2 -f "waybar.*dock.jsonc" 2>/dev/null || true
+exit 0
