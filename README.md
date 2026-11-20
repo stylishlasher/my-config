@@ -1,13 +1,184 @@
 # my-config
 
-Мои личные конфиги для Arch Linux + универсальный скрипт установки и обслуживания системы.
+Мои личные конфиги для Arch Linux: **MangoWC** (Wayland) + окружение/утилиты **Serpantinum** + универсальный скрипт установки и обслуживания системы.
 
-Репозиторий самодостаточный: один скрипт можно перекинуть на чистую систему, и он сам скачает
-все конфиги из этого репозитория и настроит окружение.
+Репозиторий самодостаточный: конфиги можно применить вручную или через мультитул, который сам скачает актуальную версию из GitHub и поможет с установкой зависимостей.
 
 ---
 
-## Быстрый старт
+## Содержание
+
+- [MangoWC dotfiles](#mangowc-dotfiles)
+  - [Что внутри](#что-внутри)
+  - [Быстрая установка MangoWC-конфигов](#быстрая-установка-mangowc-конфигов)
+  - [Зависимости](#зависимости-mangowc)
+  - [Горячие клавиши](#горячие-клавиши-mangowc)
+  - [Настройки (GUI) и режимы цвета](#настройки-gui-и-режимы-цвета)
+  - [Панель Waybar: интерактивные модули](#панель-waybar-интерактивные-модули)
+- [Arch Multitool](#arch-multitool)
+- [Быстрый старт (мультитул)](#быстрый-старт-мультитул)
+- [Структура репозитория](#структура-репозитория)
+- [Куда применяются конфиги](#куда-применяются-конфиги)
+- [Благодарности](#благодарности)
+- [Лицензия](#лицензия)
+
+---
+
+## MangoWC dotfiles
+
+В репозитории лежат готовые, «живые» дотфайлы для **MangoWC**: конфиг композитора, Waybar, foot, fuzzel, mako, matugen и скрипты/утилиты.
+
+### Что внутри
+
+- **`mango/`** — основной конфиг MangoWC (`config.conf`), пользовательские настройки (`settings.env`), скрипты (`scripts/`) и локальный установщик (`mango/install.sh`).
+  - Автозапуск: обои (`swaybg`), `mako`, `waybar`, история буфера (`cliphist`).
+  - Удобные правила окон (floating для настроек/микшера/сетей/калькулятора/PiP и т.д.).
+  - Улучшенные бинды: навигация, ресайз, скриншоты, медиа/громкость/яркость, обзор, меню питания, обои, буфер обмена.
+- **`waybar/`** — компактная настраиваемая панель (Catppuccin-совместимая палитра, прозрачность/«таблетки», кликабельные модули).
+- **`foot/`**, **`fuzzel/`**, **`mako/`** — терминал, лаунчер и уведомления в едином стиле.
+- **`matugen/`** — конфиг и шаблоны Matugen для генерации цветов из обоев (`waybar/colors.css`, `fuzzel`, `foot`, `mako`, акцент для MangoWC).
+- **`bin/mango-settings`** — TUI-настройки на `gum` (открываются по `Super+S`, повторно — закрыть).
+
+### Быстрая установка MangoWC-конфигов
+
+#### Вариант 1: локальный установщик (из этого репозитория)
+
+```bash
+git clone https://github.com/stylishlasher/my-config.git
+cd my-config
+bash mango/install.sh
+```
+
+Установщик:
+- делает бэкап существующих `~/.config/{mango,waybar,foot,fuzzel,mako,matugen}` в `~/.config-backup-<timestamp>/`;
+- копирует свежие конфиги;
+- устанавливает `~/.local/bin/mango-settings`;
+- **сохраняет ваши прежние настройки/обои/акцент** из `settings.env` (новые ключи добавляются);
+- пытается сразу применить изменения в текущей Wayland-сессии.
+
+Повторный запуск безопасен.
+
+#### Вариант 2: через Arch Multitool
+
+Мультитул умеет установить зависимости и применить MangoWC dotfiles из этого репозитория:
+
+```bash
+bash arch_multitool.sh
+# пункт 16) MangoWC: зависимости + применить dotfiles
+# или пункт 7) Применить мои конфиги (в т.ч. MangoWC, если есть)
+```
+
+При полной установке (`-f`) мультитул также предложит применить MangoWC-конфиги, если они присутствуют.
+
+### Зависимости (MangoWC)
+
+Базово нужны (Arch Linux):
+
+```bash
+sudo pacman -S --needed \
+  fuzzel gum mako libnotify swaybg waybar \
+  grim slurp wl-clipboard cliphist \
+  brightnessctl playerctl pavucontrol foot swaylock
+```
+
+Опционально:
+
+- **`matugen`** (`matugen-bin` из AUR) — генерация палитры/акцента из текущих обоев.
+- `wl-paste`/`wl-copy` уже входят в `wl-clipboard`; для истории буфера нужен `cliphist`.
+- шрифты с иконками: например `ttf-jetbrains-mono-nerd` (для корректных иконок в Waybar/foot/fuzzel).
+
+> Точный набор зависимостей можно выбрать чек-листом в мультитуле (пункт 16).
+
+### Горячие клавиши (MangoWC)
+
+| Клавиши | Действие |
+|---|---|
+| `Super + Enter` | Терминал |
+| `Super + D` | Лаунчер (`fuzzel`) |
+| `Super + F` | Браузер |
+| `Super + E` | Файловый менеджер |
+| `Super + S` | Настройки `mango-settings` (повторно — закрыть) |
+| `Super + W` | Выбор обоев |
+| `Super + Shift + W` | Случайные обои |
+| `Super + B` | Меню питания |
+| `Super + C` | История буфера обмена |
+| `Super + Shift + C` | Очистить историю буфера |
+| `Super + Q` | Закрыть окно |
+| `Super + Shift + F` | Плавающий режим окна |
+| `Super + M` | Полноэкранный режим |
+| `Super + ←/→/↑/↓` | Фокус окна |
+| `Super + Shift + ←/→/↑/↓` | Поменять окна местами |
+| `Super + Ctrl + ←/→/↑/↓` | Изменить размер |
+| `Super + Ctrl + Shift + ←/→/↑/↓` | Переместить плавающее окно |
+| `Super + 1..9` | Перейти на рабочий стол 1..9 |
+| `Super + Shift + 1..9` | **Переместить активное окно на рабочий стол 1..9** |
+| `Super + 0` | Обзор окон |
+| `Super + Shift + R` | Перезагрузить конфиг MangoWC |
+| `Super + Shift + B` | Показать/скрыть Waybar |
+| `Print` | Скриншот области |
+| `Shift + Print` | Скриншот всего экрана |
+| `XF86Audio* / XF86MonBrightness*` | Громкость, медиа, яркость |
+
+> Приложения по умолчанию (браузер/терминал/файлы) настраиваются в `Super+S → Приложения по умолчанию` и сохраняются в `~/.config/mango/settings.env`.
+
+### Настройки (GUI) и режимы цвета
+
+Запуск: `Super + S` (или `~/.local/bin/mango-settings`). Интерфейс построен на `gum` и позволяет быстро менять параметры без ручного редактирования конфигов:
+
+- **Тема и цвет** — два режима:
+  - **Matugen (из обоев)** — палитра/акцент генерируются из текущих обоев (waybar, fuzzel, foot, mako, акцент MangoWC).
+  - **Ручной акцент** — фиксированный акцент (пресеты Catppuccin/свой HEX), Matugen не перезаписывает цвета при смене обоев.
+  - Переключение режима, генерация «сейчас», выбор dark/light, типа схемы и контраста Matugen.
+- **Окна** — отступы, рамки, скругления, прозрачность, smart gaps, цвета рамок.
+- **Эффекты и анимации** — пресеты/скорость/типы/кривые, блюр, тени.
+- **Панель Waybar** — положение, высота, прозрачность/скругление, пресеты, показать/скрыть, перезапуск, **интерактивная настройка модулей**.
+- **Обои** — выбор из папки, случайные, режим подгонки, цвет фона, интеграция с Matugen.
+- **Терминал** — прозрачность, шрифт, отступы (foot).
+- **Клавиатура/тачпад/поведение/тайлинг** — раскладки и переключение, repeat, тап/скролл, фокус, snap, размеры и т.д.
+- **Файлы конфигов** — быстрый доступ к редактированию.
+
+Настройки сохраняются в `~/.config/mango/settings.env` и/или применяются к соответствующим конфигам; многие изменения применяются сразу (reload/сигналы).
+
+### Панель Waybar: интерактивные модули
+
+В `Super+S → Панель Waybar → Модули панели (интерактивно)…` можно:
+
+- **добавлять** модули (лаунчер, воркспейсы, часы, звук, сеть, батарея, трей, CPU, память, яркость, Bluetooth, медиа/MPRIS, антисон, температура, диск, настройки, питание);
+- **убирать** модули;
+- **менять порядок** в зонах слева/по центру/справа;
+- **сбрасывать** раскладку модулей к умолчанию.
+
+Для модулей, которых нет в текущем `config.jsonc`, при добавлении автоматически подставляются разумные дефолты (чтобы панель оставалась рабочей без ручной правки JSON).
+
+---
+
+## Arch Multitool
+
+**Arch Multitool** (`arch_multitool.sh`) — универсальный инструмент для чистой установки, настройки и обслуживания Arch Linux.
+
+**Установка и настройка:**
+- полная установка окружения одной командой;
+- AUR-хелпер (`yay` / `paru`);
+- dotfiles **Serpantinum** (Hyprland/Quickshell-окружение) + темы/пресеты;
+- **MangoWC dotfiles** из этого репозитория (зависимости + применение конфигов, пункт 16);
+- раскладка клавиатуры `us,ru` в Hyprland (автопатч `settings.lua`);
+- `fish` + плагины (`fisher`, `tide`) и выбор приветствия (fastfetch / анимированные 3D-фетчи);
+- `neovim` + `neovide` + Nerd Font;
+- `mpv`, GPU Screen Recorder, утилиты для архивов (Xarchiver и др.);
+- `flatpak` + Flathub, Sober/FreeSM по выбору;
+- установка ПО по чек-листам (базовое, приложения, консольные приколы/игры/CLI/фетчи);
+- файрвол (`ufw` / `firewalld`).
+
+**Обслуживание системы:**
+- аудит и оценка системы (отчёт в файл);
+- обновление (`pacman` + AUR), очистка/оптимизация, бэкапы, ремонт ключей, зеркала (`reflector`);
+- утилиты Hyprland / Wayland / Audio.
+
+Каждый компонент можно ставить отдельно из меню.
+
+---
+
+## Быстрый старт (мультитул)
 
 Скачать и запустить интерактивное меню:
 
@@ -15,7 +186,7 @@
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash
 ```
 
-Полная установка без меню (AUR-хелпер → dotfiles → fish → neovim/neovide → mpv → GSR → архивы → Flatpak → ПО по галочкам → файрвол → темы):
+Полная установка без меню:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash -s -- -f
@@ -27,207 +198,75 @@ curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/instal
 curl -fsSL https://raw.githubusercontent.com/stylishlasher/my-config/main/install/install.sh | bash -s -- -a
 ```
 
-> Требуется Arch Linux или производный дистрибутив (нужен `pacman`).
-> Запускать от обычного пользователя — `sudo` запрашивается по необходимости.
-
----
-
-## ⚠️ ПРЕСЕТЫ НУЖНО ВКЛЮЧИТЬ ВРУЧНУЮ
-
-> [!IMPORTANT]
-> Скрипт **только копирует** файлы-пресеты из репозитория (все `*.json` в корне,
-> например `glass.json`, `archy-style.json`, `ultra-minimalist.json`) в
-> `~/.local/state/serpantinum/presets`. Чтобы тема применилась, её надо **выбрать вручную**:
->
-> **Serpantinum → Настройки → Presets (Пресеты) → выбрать нужную тему.**
->
-> Без этого шага цвета/оформление не изменятся.
->
-> [!TIP]
-> Иногда тема может отобразиться с багами (частично применилась/не перерисовалась).
-> В этом случае перевыберите **тему** (а не пресет) в
-> **Serpantinum → Настройки → Тема (Оформление)** — там есть список тем;
-> обычно этого достаточно.
-
----
-
-## ⚠️ ДРАЙВЕРЫ GPU НЕ УСТАНАВЛИВАЮТСЯ АВТОМАТИЧЕСКИ
-
-> [!WARNING]
-> Скрипт **не ставит** драйверы видеокарты. Установите их под свою GPU **до перезагрузки**,
-> иначе Hyprland / Serpantinum могут не запуститься:
->
-> ```bash
-> # NVIDIA
-> sudo pacman -S nvidia nvidia-utils nvidia-settings
-> # AMD
-> sudo pacman -S mesa vulkan-radeon libva-mesa-driver
-> # Intel
-> sudo pacman -S mesa vulkan-intel intel-media-driver
-> ```
-
----
-
-## Скриншоты пресетов
-
-| Пресет | Вид |
-|---|---|
-| `glass` | ![glass](placeholders/glass.png) |
-| `archy-style` | ![archy-style](placeholders/archy-style.png) |
-| `ultra-minimalist` | ![ultra-minimalist](placeholders/ultra-minimalist.png) |
-
----
-
-## Что это за скрипт
-
-**Arch Multitool** (`arch_multitool.sh`) — универсальный инструмент для чистой установки,
-настройки и обслуживания Arch Linux. Умеет всё в одном меню:
-
-**Установка и настройка:**
-- полная установка окружения одной командой;
-- AUR-хелпер (`yay` / `paru`);
-- dotfiles (окружение **Serpantinum**, см. раздел «Благодарности»);
-- раскладка клавиатуры `us,ru` в Hyprland (автопатч `settings.lua`);
-- `fish` + плагины (`fisher`, `tide`) с применением конфига;
-- **приветствие терминала на выбор** (спрашивается при установке fish): **fastfetch**
-  или один из **анимированных 3D-фетчей** — свои фетчи в одном стиле с вращающейся
-  3D-моделью и опциональным вторым (акцентным) цветом:
-  - `keyfetch` — вращающийся **3D-ключ** (классический);
-  - `treefetch` — **ёлочка-ароматизатор**;
-  - `tomatofetch` — **помидор**;
-  - `stoolfetch` — **табурет**;
-  - `skeletonfetch` — **скелетный ключ** (с акцентом).
-  Для фетча выбирается цвет (14 цветов, радужный или свой HEX), а для фетчей
-  с акцентом — ещё и акцентный цвет (`treefetch`, `tomatofetch`, `stoolfetch`,
-  `skeletonfetch`; у `keyfetch` акцента нет). Меню строится динамически по списку
-  фетчей, так что новые фетчи добавляются одной строкой;
-- **3D-фетч** закрепляется **внизу** экрана и **крутится всё время, пока открыт
-  терминал**: шелл остаётся сверху и сохраняет обычный скроллбек (длинный вывод
-  остаётся прокручиваемым). Скрипт сам собирает фетчи из C (`cc -O2 ... -lm`,
-  при необходимости доставит `gcc`). Остановить — `<фетч> --stop`;
-  вручную: `treefetch -c orange --accent "#00ff00" --size 1.5`
-  (флаги: `-c/--color`, `-a/--accent`, `-r/--rainbow`, `--size`,
-  `--height`, `--pin`, `--pin-bottom`, `--stop`, `-n/--no-info` и т.д.);
-- `neovim` + `neovide` с применением конфига и Nerd Font;
-- `mpv` (медиаплеер) — ставится автоматически;
-- **GPU Screen Recorder** (`gpu-screen-recorder` + UI-оверлей);
-- утилиты для архивов: **Xarchiver** (GUI для 7z/zip/tar) и консольные (`tar`, `zip`, `unzip`, `unrar`, `7zip`, ...);
-- **файрвол** — автонастройка `ufw` или `firewalld` (с объяснением разницы);
-- применение личных конфигов и тем Serpantinum (`glass`, `archy-style`, `ultra-minimalist` — авто-поиск всех пресетов);
-- `flatpak` + репозиторий Flathub (автонастройка) и **Sober** (Roblox на Linux) по выбору;
-- **FreeSM Launcher** (Minecraft, AUR) по выбору;
-- **установка ПО — вкладки** (пункт 8): базовый набор, приложения, консольные приколы,
-  кастомные фетчи, Flatpak + Sober/FreeSM, «всё по галочкам»;
-- **приложения** (вкладка, чек-лист): браузеры (`firefox`, `chromium`, `librewolf`, `brave-bin`),
-  мессенджеры (`telegram-desktop`, `vesktop-bin`/Vencord, `discord`, `element-desktop`,
-  `signal-desktop`), музыка и видео (`spotify`, `vlc`, `obs-studio`), игры (`steam`, `lutris`,
-  `heroic-games-launcher-bin`, `prismlauncher`, `bottles`), прочее (`gimp`, `qbittorrent`,
-  `libreoffice-fresh`, `keepassxc`). **Всё необязательное — по выбору**, `steam` по умолчанию
-  выключен (при выборе автоматически включается репозиторий `[multilib]`);
-- **консольные приколы** (вкладка с подпапками) — всего 118 пакетов, **все по умолчанию
-  выключены** (ставятся только по явному выбору):
-  - *приколы и визуализации*: `cava`, `lavat`, `cbonsai`, `tty-clock`, `cmatrix`, `unimatrix-git`,
-    `pipes.sh`, `lolcat`, `figlet`, `toilet`, `cowsay`, `ponysay`, `fortune-mod`,
-    `asciinema`, `chafa`, `catimg`, `viu`, `timg`, `jp2a`, `glow`, `boxes`, `bb`, `rain`,
-    `terminal-parrot`, `hollywood`, `genact`, `asciiquarium`, `nyancat`, `peaclock`, `sl`,
-    `aalib`, `libcaca`;
-  - *игры*: `nudoku`, `tty-solitaire`, `bastet`, `vitetris`, `ninvaders`, `moon-buggy`, `greed`,
-    `myman`, `pacman4console`, `gnugo`, `gnuchess`, `nethack`, `crawl`, `angband`, `cataclysm-dda`;
-  - *мониторы*: `bottom`, `glances`, `htop`, `nvtop`, `ncdu`, `dust`, `duf`, `procs`, `pv`,
-    `gtop`, `bandwhich`, `nmon`, `iftop`, `nethogs`, `ttyplot`;
-  - *медиа*: `cmus`, `ncmpcpp`, `mpd`, `yt-dlp`, `aria2`, `w3m`, `lynx`, `elinks`, `browsh`,
-    `neomutt`, `termusic`;
-  - *CLI-утилиты*: `bat`, `eza`, `fd`, `ripgrep`, `fzf`, `zoxide`, `jq`, `yq`, `tree`, `tmux`,
-    `zellij`, `mc`, `ranger`, `yazi`, `lf`, `nnn`, `tig`, `lazygit`, `gitui`, `calcurse`, `task`, `lsd`;
-  - *кастомные фетчи*: `fastfetch`, `uwufetch`, `hyfetch`, `macchina`, `cpufetch`, `onefetch`,
-    `neofetch`, `pfetch`, `afetch`, `nerdfetch`, `nitch`, `bunnyfetch`, `ramfetch`, `yafetch`,
-    `archfetch`, `wfetch`, `newfetch`, `rainbowfetch`, `paleofetch-git`, `gfetch-git`,
-    `fet.sh-git`, `gpufetch`, а также **`areofyl/fetch`** — анимированный 3D-фетч
-    ([github.com/areofyl/fetch](https://github.com/areofyl/fetch)): ставится из AUR
-    (`fetch-git`), а если AUR-хелпера нет — скрипт **сам скачивает и собирает** его из
-    исходников (`git clone` → `make` → `sudo make install`). Команда после установки —
-    `fetch` (например `fetch -l arch`).
-
-**Обслуживание системы (без установки):**
-- аудит и оценка системы (отчёт в файл);
-- полное обновление (`pacman` + AUR);
-- оптимизация и очистка (сироты, кэш, журнал, кэш AUR, Flatpak);
-- бэкап конфигураций в `.tar.zst`;
-- ремонт ключей `pacman`;
-- обновление зеркал через `reflector`;
-- утилиты Hyprland / Wayland / Audio / Serpantinum.
-
-Каждый компонент можно поставить отдельно — все пункты установки доступны и поодиночке.
-
-### Как это работает
-
-- Если конфиги (`fish/`, `nvim/`, `*.json`) лежат рядом со скриптом — берутся они.
-- Иначе скрипт **скачивает архив** этого репозитория и применяет конфиги оттуда.
-- Старые конфиги не удаляются, а сохраняются с суффиксом `.bak.<дата>`.
-- Жёсткие пути `/home/<старый-пользователь>` в конфигах автоматически заменяются на `$HOME`.
-- Необязательный файл настроек: `~/.config/arch_multitool.conf`.
+> Требуется Arch Linux или производный дистрибутив (нужен `pacman`). Запускать от обычного пользователя — `sudo` запрашивается по необходимости.
 
 ---
 
 ## Структура репозитория
 
-```
+```text
 my-config/
-├── arch_multitool.sh      # сам мультитул
+├── arch_multitool.sh      # универсальный мультитул
 ├── install/
-│   └── install.sh         # установщик-загрузчик (curl | bash)
+│   └── install.sh         # bootstrap (curl | bash)
 ├── install.txt            # команда установки Serpantinum (читается мультитулом)
-├── fish/                  # конфиг fish (config.fish, conf.d, functions, ...)
-├── nvim/                  # конфиг Neovim (init.lua)
-├── placeholders/          # скриншоты пресетов для README
-├── glass.json             # тема Serpantinum «стекло»
-├── archy-style.json       # тема Serpantinum «минимализм»
-├── ultra-minimalist.json  # тема Serpantinum «ультра-минимализм»
-└── LICENSE                # GNU AGPL-3.0
+├── mango/                 # MangoWC: config.conf, settings.env, scripts/, install.sh
+├── waybar/                # Waybar: config.jsonc, style.css, colors.css
+├── foot/                  # терминал foot
+├── fuzzel/                # лаунчер fuzzel
+├── mako/                  # уведомления mako
+├── matugen/               # Matugen: config.toml + templates/
+├── bin/
+│   └── mango-settings     # TUI-настройки MangoWC (gum)
+├── fish/                  # конфиг fish
+├── nvim/                  # конфиг Neovim
+├── placeholders/          # скриншоты пресетов
+├── *.json                 # пресеты Serpantinum (автопоиск мультитулом)
+├── *.c                    # исходники анимированных фетчей
+├── README.md
+└── LICENSE.md             # GNU AGPL-3.0
 ```
 
-> Пресеты определяются автоматически: функция `apply_archy_themes` находит **все**
-> `*.json` в корне репозитория и копирует их в presets.
-> Новые темы из репозитория подхватываются сами при нажатии пункта 7 меню.
+---
 
-Куда применяются конфиги:
+## Куда применяются конфиги
 
 | Что | Куда |
 |---|---|
+| MangoWC | `~/.config/mango/` (+ `~/.local/bin/mango-settings`) |
+| Waybar | `~/.config/waybar/` |
+| foot | `~/.config/foot/` |
+| fuzzel | `~/.config/fuzzel/` |
+| mako | `~/.config/mako/` |
+| matugen | `~/.config/matugen/` |
 | fish | `~/.config/fish/` |
-| neovim | `~/.config/nvim/init.lua` |
-| neovide | `~/.config/neovide/` (если есть) |
-| раскладка клавиатуры | `~/.config/hypr/config/settings.lua` (`kb_layout = "us,ru"`) |
+| neovim | `~/.config/nvim/` |
 | пресеты Serpantinum | `~/.local/state/serpantinum/presets/` |
 
+> Пресеты Serpantinum после копирования нужно включить вручную: **Serpantinum → Настройки → Presets (Пресеты)**.
+
 > [!WARNING]
-> После копирования пресетов **обязательно** включите нужный в
-> **Serpantinum → Настройки → Presets (Пресеты) → выбрать тему**. Само по себе
-> копирование файлов внешний вид не меняет.
+> Скрипты/мультитул **не устанавливают драйверы GPU автоматически**. Установите драйверы под свою видеокарту до перезагрузки (NVIDIA/AMD/Intel), иначе Wayland-сессия может не запуститься.
 
 ---
 
 ## Благодарности
 
-Основное рабочее окружение (Wayland-шелл, панель, темы, аудио и т.д.) — это проект
-**Serpantinum**, а не моя разработка. Спасибо автору и контрибьюторам:
+Окружение **Serpantinum** (Wayland-шелл, темы/пресеты и т.д.) — отдельный проект:
 
 - **Автор:** Illia Miroshnichenko ([@ilyamiro](https://github.com/ilyamiro))
 - **Репозиторий:** https://github.com/ilyamiro/serpantinum
-- **Сайт и документация:** https://serpantinum.dev
+- **Сайт:** https://serpantinum.dev
 - **Лицензия:** GNU AGPL-3.0
 
-Установка самого Serpantinum (используется мультитулом в пункте про dotfiles):
+Установка Serpantinum:
 
 ```bash
 curl -fsSL install.serpantinum.dev | bash
 ```
 
-Темы `glass.json`, `archy-style.json` и `ultra-minimalist.json` — это пресеты оформления Serpantinum.
-
 ---
 
 ## Лицензия
 
-Этот репозиторий распространяется под лицензией **GNU AGPL-3.0** — той же, что и
-**Serpantinum** (см. [LICENSE](LICENSE)).
+Этот репозиторий распространяется под лицензией **GNU AGPL-3.0** (см. [LICENSE.md](LICENSE.md)).

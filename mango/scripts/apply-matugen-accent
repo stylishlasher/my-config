@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Применить акцент из matugen (обновляет focus_color и ACCENT в settings.env)
+ENVF="$HOME/.config/mango/settings.env"
+ACCENT_FILE="$HOME/.config/mango/matugen-accent.env"
+CONF="$HOME/.config/mango/config.conf"
+WB="$HOME/.config/waybar"
+
+[ -f "$ACCENT_FILE" ] || exit 0
+# shellcheck source=/dev/null
+. "$ACCENT_FILE"
+[ -n "$ACCENT" ] || exit 0
+
+# Записать в settings.env
+touch "$ENVF"
+grep -v "^ACCENT=" "$ENVF" > "$ENVF.tmp"
+printf 'ACCENT=%q\n' "$ACCENT" >> "$ENVF.tmp"
+mv "$ENVF.tmp" "$ENVF"
+
+# Считаем, что применение accent.env означает активный режим Matugen
+grep -v "^MATUGEN=" "$ENVF" 2>/dev/null > "$ENVF.tmp2" || true
+{ cat "$ENVF.tmp2" 2>/dev/null; printf 'MATUGEN=1\n'; } > "$ENVF.tmp"
+mv "$ENVF.tmp" "$ENVF"; rm -f "$ENVF.tmp2"
+grep -v "^COLOR_MODE=" "$ENVF" > "$ENVF.tmp"
+{ cat "$ENVF.tmp"; printf 'COLOR_MODE=matugen\n'; } > "$ENVF.tmp2"
+mv "$ENVF.tmp2" "$ENVF"; rm -f "$ENVF.tmp"
+
+# focus_color в mango
+if grep -q "^focus_color=" "$CONF" 2>/dev/null; then
+  sed -i "s|^focus_color=.*|focus_color=0x${ACCENT}ff|" "$CONF"
+else
+  echo "focus_color=0x${ACCENT}ff" >> "$CONF"
+fi
+
+# color в waybar config (для calendar today и т.п.)
+if [ -f "$WB/config.jsonc" ]; then
+  sed -i "s|color='#[0-9a-fA-F]\{6\}'|color='#${ACCENT}'|" "$WB/config.jsonc"
+fi
+
+# Перезагрузка mango (если доступно)
+mmsg dispatch reload_config >/dev/null 2>&1 || mmsg -d reload_config >/dev/null 2>&1 || true

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Запускает приложения по умолчанию из settings.env
+. "$HOME/.config/mango/settings.env" 2>/dev/null
+
+run() {
+  local bin="${1%% *}"
+  if command -v "$bin" >/dev/null 2>&1; then
+    exec $1
+  fi
+  notify-send "Не найдено: $bin" "Поставь его или поменяй в Super+S → Приложения" 2>/dev/null
+  exit 1
+}
+
+case "$1" in
+  browser)
+    cmd="${BROWSER_CMD:-librewolf}"
+    # librewolf из flatpak
+    if ! command -v "${cmd%% *}" >/dev/null 2>&1 && command -v flatpak >/dev/null 2>&1 \
+       && flatpak info io.gitlab.librewolf-community >/dev/null 2>&1; then
+      cmd="flatpak run io.gitlab.librewolf-community"
+    fi
+    run "$cmd"
+    ;;
+  terminal) run "${TERMINAL_CMD:-foot}" ;;
+  files)    run "${FILES_CMD:-thunar}" ;;
+  settings)
+    # Super+S — тоггл: открыто → закрыть
+    if pgrep -f -- '--app-id mango-settings' >/dev/null 2>&1; then
+      pkill -f -- '--app-id mango-settings'
+      exit 0
+    fi
+    exec foot --app-id mango-settings -W 95x36 -e "$HOME/.local/bin/mango-settings"
+    ;;
+  *)
+    echo "Usage: $0 {browser|terminal|files|settings}"; exit 1 ;;
+esac

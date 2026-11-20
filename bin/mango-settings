@@ -1,0 +1,718 @@
+#!/usr/bin/env bash
+# mango-settings — интерактивные настройки MangoWC (на gum)
+# Запуск: Super+S (повторно — закрывает окно)
+CONF="$HOME/.config/mango/config.conf"
+ENVF="$HOME/.config/mango/settings.env"
+WB="$HOME/.config/waybar"
+FZ="$HOME/.config/fuzzel/fuzzel.ini"
+FOOT="$HOME/.config/foot/foot.ini"
+MAKO="$HOME/.config/mako/config"
+SCR="$HOME/.config/mango/scripts"
+
+# ── helpers ──────────────────────────────────────────────────────────────
+load_env() {
+  BROWSER_CMD=librewolf; TERMINAL_CMD=foot; FILES_CMD=thunar
+  WALLPAPER=""; WALLPAPER_DIR=""; WALLPAPER_MODE=fill; WALLPAPER_COLOR=1e1e2e
+  ACCENT=cba6f7; BAR_OPACITY=0.65; PILL_OPACITY=0.55; PILL_RADIUS=8
+  MATUGEN=1; MATUGEN_MODE=dark; MATUGEN_TYPE=""; MATUGEN_CONTRAST=0
+  COLOR_MODE=matugen
+  [ -f "$ENVF" ] && . "$ENVF"
+  # Совместимость: COLOR_MODE приоритетнее MATUGEN
+  if [ "${COLOR_MODE:-}" = "manual" ]; then MATUGEN=0; else MATUGEN=1; COLOR_MODE=matugen; fi
+  [ -n "$WALLPAPER_DIR" ] || { WALLPAPER_DIR="$HOME/Pictures/Wallpapers"; [ -d "$WALLPAPER_DIR" ] || WALLPAPER_DIR="$HOME/Pictures"; }
+  export GUM_CHOOSE_CURSOR_FOREGROUND="#$ACCENT" GUM_CHOOSE_HEADER_FOREGROUND="#$ACCENT" \
+         GUM_CHOOSE_SELECTED_FOREGROUND="#$ACCENT" GUM_INPUT_CURSOR_FOREGROUND="#$ACCENT" \
+         GUM_INPUT_PROMPT_FOREGROUND="#$ACCENT" GUM_FILTER_INDICATOR_FOREGROUND="#$ACCENT" \
+         GUM_FILTER_MATCH_FOREGROUND="#$ACCENT"
+}
+
+# Записать одну строку в settings.env (остальные не трогает)
+set_env() {
+  touch "$ENVF"
+  grep -v "^$1=" "$ENVF" > "$ENVF.tmp"
+  printf '%s=%q\n' "$1" "$2" >> "$ENVF.tmp"
+  mv "$ENVF.tmp" "$ENVF"
+}
+
+get_conf() { grep -m1 "^$1=" "$CONF" 2>/dev/null | cut -d= -f2-; }
+set_conf() {
+  if grep -q "^$1=" "$CONF" 2>/dev/null; then sed -i "s|^$1=.*|$1=$2|" "$CONF"
+  else echo "$1=$2" >> "$CONF"; fi
+}
+reload()  { mmsg dispatch reload_config >/dev/null 2>&1 || mmsg -d reload_config >/dev/null 2>&1; }
+msg()     { gum style --foreground "#a6e3a1" "  ✔  $1"; sleep 0.7; }
+err()     { gum style --foreground "#f38ba8" "  ✘  $1"; sleep 1.1; }
+pick()    { gum choose --height 18 --header "$1" "${@:2}"; }
+ask()     { gum input --placeholder "$1" --value "${2:-}"; }
+bar_reload() { pkill -SIGUSR2 waybar 2>/dev/null; }
+
+toggle_conf() {  # ключ, название
+  local cur new; cur=$(get_conf "$1")
+  [ "$cur" = 1 ] && new=0 || new=1
+  set_conf "$1" "$new"; reload
+  msg "$2: $([ "$new" = 1 ] && echo включено || echo выключено)"
+}
+
+# Применить числовое/текстовое значение выбранным пунктом: set_pick ключ заголовок значения...
+set_pick() {
+  local key="$1" head="$2"; shift 2
+  local v; v=$(pick "$head (сейчас: $(get_conf "$key"))" "$@") || return
+  set_conf "$key" "$v"; reload; msg "Готово"
+}
+
+apply_accent() {
+  local hex="$1"
+  set_env ACCENT "$hex"
+  # Ручной выбор акцента переводит в ручной режим цвета (Matugen не будет перетирать при смене обоев)
+  set_env COLOR_MODE manual
+  set_env MATUGEN 0
+  set_conf focus_color "0x${hex}ff"
+  sed -i "s|^@define-color accent .*|@define-color accent #${hex};|" "$WB/colors.css"
+  sed -i "s|^border=.*|border=${hex}ff|; s|^selection=.*|selection=${hex}ff|; s|^match=.*|match=${hex}ff|" "$FZ"
+  sed -i "s|^cursor=.*|cursor=1e1e2e ${hex}|" "$FOOT"
+  sed -i "s|^border-color=.*|border-color=#${hex}|" "$MAKO"
+  sed -i "s|color='#[0-9a-fA-F]\{6\}'|color='#${hex}'|" "$WB/config.jsonc"
+  bar_reload; makoctl reload >/dev/null 2>&1; reload
+}
+
+apply_bar() {  # прозрачность панели, прозрачность таблеток, радиус таблеток
+  set_env BAR_OPACITY "$1"; set_env PILL_OPACITY "$2"; set_env PILL_RADIUS "$3"
+  # Сохраняем текущие RGB из colors.css (после matugen), меняем только альфу
+  local bar_rgb pill_rgb
+  bar_rgb=$(grep -oP '@define-color bar_bg rgba\(\K[0-9]+, [0-9]+, [0-9]+' "$WB/colors.css" 2>/dev/null || echo "30, 30, 46")
+  pill_rgb=$(grep -oP '@define-color pill rgba\(\K[0-9]+, [0-9]+, [0-9]+' "$WB/colors.css" 2>/dev/null || echo "69, 71, 90")
+  sed -i "s|^@define-color bar_bg .*|@define-color bar_bg rgba($bar_rgb, $1);|" "$WB/colors.css"
+  sed -i "s|^@define-color pill .*|@define-color pill rgba($pill_rgb, $2);|" "$WB/colors.css"
+  sed -i "s|border-radius: [0-9]*px; /\*pill-radius\*/|border-radius: $3px; /*pill-radius*/|" "$WB/style.css"
+  bar_reload
+}
+
+# ── Анимации: пресеты ────────────────────────────────────────────────────
+anim_preset() {
+  local t_open=zoom t_close=zoom l_open=slide l_close=slide zoom=0.8 fin=0.4 fout=0.8
+  local d_move d_open d_close d_tag c_open c_move c_tag c_close on=1
+  case "$1" in
+    Snappy)  zoom=0.88; fin=0.5
+             d_move=200; d_open=200; d_close=170; d_tag=220
+             c_open=0.22,1,0.36,1; c_move=0.22,1,0.36,1; c_tag=0.22,1,0.36,1; c_close=0.4,0,1,1;;
+    Smooth)  d_move=320; d_open=320; d_close=260; d_tag=320
+             c_open=0.16,1,0.3,1; c_move=0.16,1,0.3,1; c_tag=0.16,1,0.3,1; c_close=0.4,0,0.2,1;;
+    Bouncy)  zoom=0.6; fin=0.3
+             d_move=420; d_open=420; d_close=300; d_tag=400
+             c_open=0.34,1.35,0.64,1; c_move=0.34,1.2,0.64,1; c_tag=0.34,1.2,0.64,1; c_close=0.4,0,0.2,1;;
+    Slide)   t_open=slide; t_close=slide; fin=0.8
+             d_move=300; d_open=300; d_close=240; d_tag=320
+             c_open=0.16,1,0.3,1; c_move=0.16,1,0.3,1; c_tag=0.16,1,0.3,1; c_close=0.4,0,0.2,1;;
+    Fade)    t_open=fade; t_close=fade; l_open=fade; l_close=fade; fin=0.0; fout=0.0
+             d_move=220; d_open=200; d_close=160; d_tag=240
+             c_open=0.25,0.1,0.25,1; c_move=0.25,0.1,0.25,1; c_tag=0.25,0.1,0.25,1; c_close=0.25,0.1,0.25,1;;
+    Off)     on=0
+             d_move=0; d_open=0; d_close=0; d_tag=0
+             c_open=0.25,0.1,0.25,1; c_move=0.25,0.1,0.25,1; c_tag=0.25,0.1,0.25,1; c_close=0.25,0.1,0.25,1;;
+  esac
+  set_conf animations "$on"; set_conf layer_animations "$on"
+  set_conf animation_type_open "$t_open"; set_conf animation_type_close "$t_close"
+  set_conf layer_animation_type_open "$l_open"; set_conf layer_animation_type_close "$l_close"
+  set_conf animation_fade_in 1; set_conf animation_fade_out 1
+  set_conf zoom_initial_ratio "$zoom"; set_conf zoom_end_ratio "$zoom"
+  set_conf fade_in_begin_opacity "$fin"; set_conf fade_out_begin_opacity "$fout"
+  set_conf animation_duration_move "$d_move"; set_conf animation_duration_open "$d_open"
+  set_conf animation_duration_close "$d_close"; set_conf animation_duration_tag "$d_tag"
+  set_conf animation_curve_open "$c_open"; set_conf animation_curve_move "$c_move"
+  set_conf animation_curve_tag "$c_tag"; set_conf animation_curve_close "$c_close"
+  reload
+}
+
+# ── Меню ─────────────────────────────────────────────────────────────────
+menu_theme() {
+  while true; do
+    local mode_label="ручной"
+    [ "${COLOR_MODE:-matugen}" = "matugen" ] && mode_label="Matugen (из обоев)"
+    local c; c=$(pick "Тема и цвет  ·  режим: $mode_label  ·  акцент: #$ACCENT" \
+      "Режим цвета: Matugen (из обоев)" "Режим цвета: Ручной акцент" \
+      "Matugen: применить сейчас к обоям" \
+      "Акцент: Mauve" "Акцент: Lavender" "Акцент: Blue" "Акцент: Sapphire" \
+      "Акцент: Teal" "Акцент: Green" "Акцент: Yellow" "Акцент: Peach" "Акцент: Pink" "Акцент: Red" \
+      "Свой HEX…" "Назад") || return
+    local hex=""
+    case "$c" in
+      "Режим цвета: Matugen (из обоев)")
+        set_env COLOR_MODE matugen; set_env MATUGEN 1
+        msg "Режим: Matugen. Цвета будут браться из обоев."
+        "$SCR/wallpaper" matugen >/dev/null 2>&1 && msg "Цвета обновлены из текущих обоев" || true
+        load_env; continue;;
+      "Режим цвета: Ручной акцент")
+        set_env COLOR_MODE manual; set_env MATUGEN 0
+        msg "Режим: ручной акцент (Matugen при смене обоев отключён)"
+        load_env; continue;;
+      "Matugen: применить сейчас к обоям")
+        if ! command -v matugen >/dev/null; then err "Установите matugen (AUR: matugen-bin)"; continue; fi
+        set_env COLOR_MODE matugen; set_env MATUGEN 1
+        "$SCR/wallpaper" matugen && msg "Цвета обновлены из обоев" || err "Нет обоев или ошибка matugen"
+        load_env; continue;;
+      "Акцент: Mauve") hex=cba6f7;; "Акцент: Lavender") hex=b4befe;; "Акцент: Blue") hex=89b4fa;; "Акцент: Sapphire") hex=74c7ec;;
+      "Акцент: Teal") hex=94e2d5;; "Акцент: Green") hex=a6e3a1;; "Акцент: Yellow") hex=f9e2af;; "Акцент: Peach") hex=fab387;;
+      "Акцент: Pink") hex=f5c2e7;; "Акцент: Red") hex=f38ba8;;
+      "Свой HEX…") hex=$(ask "6 символов, например ff8800") || continue; hex=${hex#\#}
+                   [[ "$hex" =~ ^[0-9a-fA-F]{6}$ ]] || { err "Неверный HEX"; continue; };;
+      "Назад") return;;
+    esac
+    if [ -n "$hex" ]; then
+      apply_accent "$hex"; load_env; msg "Акцент применён (#$hex), режим: ручной"
+    fi
+  done
+}
+
+menu_windows() {
+  local c; c=$(pick "Окна" \
+    "Отступы между окнами" "Отступы от краёв экрана" "Толщина рамки" "Скругление окон" \
+    "Прозрачность активного окна" "Прозрачность неактивных окон" \
+    "Не скруглять единственное окно" "Smart gaps" "Цвета рамок") || return
+  local v
+  case "$c" in
+    "Отступы между окнами")
+      v=$(pick "px" 0 2 4 6 8 10 12 16 20 24) && { set_conf gap_inner_horizontal "$v"; set_conf gap_inner_vertical "$v"; reload; msg "Готово"; };;
+    "Отступы от краёв экрана")
+      v=$(pick "px" 0 4 6 8 10 12 16 20 30 40) && { set_conf gap_outer_horizontal "$v"; set_conf gap_outer_vertical "$v"; reload; msg "Готово"; };;
+    "Толщина рамки")   set_pick border_px "Рамка, px" 0 1 2 3 4 5 6 8;;
+    "Скругление окон") set_pick border_radius "Радиус, px" 0 4 6 8 10 12 14 16 20 24;;
+    "Прозрачность активного окна")     set_pick focused_opacity "Opacity" 1.0 0.98 0.95 0.9 0.85;;
+    "Прозрачность неактивных окон")    set_pick unfocused_opacity "Opacity" 1.0 0.95 0.9 0.85 0.8 0.75 0.7 0.6;;
+    "Не скруглять единственное окно")  toggle_conf no_radius_when_single "Без скругления у одного окна";;
+    "Smart gaps")      toggle_conf smart_gaps "Smart gaps";;
+    "Цвета рамок")     menu_window_colors;;
+  esac
+}
+
+menu_window_colors() {
+  local c key hex
+  c=$(pick "Цвета рамок" "Обычная" "В фокусе" "Срочная (urgent)" "Развёрнутая" "Scratchpad" "Overlay") || return
+  case "$c" in
+    "Обычная") key=border_color;; "В фокусе") key=focus_color;; "Срочная (urgent)") key=urgent_color;;
+    "Развёрнутая") key=maximized_screen_color;; "Scratchpad") key=scratchpad_color;; "Overlay") key=overlay_color;;
+  esac
+  hex=$(ask "HEX, 6 символов" "$(get_conf $key | sed 's/^0x//; s/ff$//')") || return
+  hex=${hex#\#}
+  [[ "$hex" =~ ^[0-9a-fA-F]{6}$ ]] || { err "Неверный HEX"; return; }
+  set_conf "$key" "0x${hex}ff"; reload; msg "Цвет обновлён"
+}
+
+menu_effects() {
+  local c; c=$(pick "Эффекты и анимации" \
+    "Анимации…" \
+    "Блюр: вкл/выкл" "Блюр: радиус" "Блюр: проходы" "Блюр панелей: вкл/выкл" "Блюр: тонкая настройка" \
+    "Тени: вкл/выкл" "Тени: только у плавающих" "Тени: параметры") || return
+  case "$c" in
+    "Анимации…")                menu_anim;;
+    "Блюр: вкл/выкл")           toggle_conf blur "Блюр";;
+    "Блюр: радиус")             set_pick blur_params_radius "Радиус" 2 3 4 5 6 8 10 12 14 16;;
+    "Блюр: проходы")            set_pick blur_params_num_passes "Проходы (больше = плавнее, тяжелее)" 1 2 3 4 5 6;;
+    "Блюр панелей: вкл/выкл")   toggle_conf blur_layer "Блюр панелей";;
+    "Блюр: тонкая настройка")   menu_blur_params;;
+    "Тени: вкл/выкл")           toggle_conf shadows "Тени";;
+    "Тени: только у плавающих") toggle_conf shadow_only_floating "Тени только у плавающих";;
+    "Тени: параметры")          menu_shadow_params;;
+  esac
+}
+
+menu_anim() {
+  local c; c=$(pick "Анимации" \
+    "Пресет (быстрый старт)" "Включить/выключить окна" "Включить/выключить панели" "Скорость" \
+    "Анимация открытия окон" "Анимация закрытия окон" "Анимация панелей" \
+    "Кривая (стиль движения)" "Zoom: размер появления") || return
+  local v
+  case "$c" in
+    "Пресет (быстрый старт)")
+      v=$(pick "Пресет" \
+        "Smooth — плавно (по умолчанию)" "Snappy — быстро и резко" "Bouncy — пружинит" \
+        "Slide — выезд" "Fade — только прозрачность" "Off — без анимаций") || return
+      anim_preset "${v%% *}"; msg "Пресет: ${v%% *}";;
+    "Включить/выключить окна")   toggle_conf animations "Анимации окон";;
+    "Включить/выключить панели") toggle_conf layer_animations "Анимации панелей";;
+    "Скорость")
+      v=$(pick "Скорость" "Очень быстро (180)" "Быстро (250)" "Нормально (320)" "Плавно (450)" "Медленно (650)") || return
+      v=${v//[^0-9]/}
+      for k in animation_duration_move animation_duration_open animation_duration_tag; do set_conf "$k" "$v"; done
+      set_conf animation_duration_close "$(( v * 4 / 5 ))"
+      reload; msg "Скорость: ${v} мс";;
+    "Анимация открытия окон")  set_pick animation_type_open "Открытие" zoom slide fade none;;
+    "Анимация закрытия окон")  set_pick animation_type_close "Закрытие" zoom slide fade none;;
+    "Анимация панелей")
+      v=$(pick "Панели (меню, уведомления)" zoom slide fade none) || return
+      set_conf layer_animation_type_open "$v"; set_conf layer_animation_type_close "$v"; reload; msg "Готово";;
+    "Кривая (стиль движения)")
+      v=$(pick "Кривая движения" \
+        "Плавное замедление   0.16,1,0.3,1" "Резкий старт   0.22,1,0.36,1" \
+        "Ease in-out   0.65,0,0.35,1" "С отскоком   0.34,1.3,0.64,1" "Линейная   0,0,1,1" "Своя…") || return
+      if [ "$v" = "Своя…" ]; then v=$(ask "x1,y1,x2,y2") || return; else v=${v##* }; fi
+      [[ "$v" =~ ^-?[0-9.]+,-?[0-9.]+,-?[0-9.]+,-?[0-9.]+$ ]] || { err "Нужен формат x1,y1,x2,y2"; return; }
+      for k in animation_curve_open animation_curve_move animation_curve_tag; do set_conf "$k" "$v"; done
+      reload; msg "Кривая применена";;
+    "Zoom: размер появления")
+      v=$(pick "Начальный размер окна" 0.5 0.6 0.7 0.8 0.9) || return
+      set_conf zoom_initial_ratio "$v"; set_conf zoom_end_ratio "$v"; reload; msg "Готово";;
+  esac
+}
+
+menu_blur_params() {
+  local c v key; c=$(pick "Параметры блюра" "Noise" "Brightness" "Contrast" "Saturation") || return
+  case "$c" in
+    Noise) key=blur_params_noise;; Brightness) key=blur_params_brightness;;
+    Contrast) key=blur_params_contrast;; Saturation) key=blur_params_saturation;;
+  esac
+  v=$(ask "число, сейчас $(get_conf $key)" "$(get_conf $key)") || return
+  [[ "$v" =~ ^[0-9.]+$ ]] || { err "Нужно число"; return; }
+  set_conf "$key" "$v"; reload; msg "Готово"
+}
+
+menu_shadow_params() {
+  local c v; c=$(pick "Параметры теней" "Размер" "Размытие" "Смещение X" "Смещение Y" "Цвет (0xRRGGBBAA)") || return
+  case "$c" in
+    "Размер")    set_pick shadows_size "px" 4 6 8 10 12 16 20 24;;
+    "Размытие")  set_pick shadows_blur "px" 8 12 16 18 24 32;;
+    "Смещение X") v=$(ask "px" "$(get_conf shadows_position_x)") && { set_conf shadows_position_x "$v"; reload; msg "Готово"; };;
+    "Смещение Y") v=$(ask "px" "$(get_conf shadows_position_y)") && { set_conf shadows_position_y "$v"; reload; msg "Готово"; };;
+    "Цвет (0xRRGGBBAA)") v=$(ask "0xRRGGBBAA" "$(get_conf shadows_color)") && { set_conf shadows_color "$v"; reload; msg "Готово"; };;
+  esac
+}
+
+# Известные модули панели (id → человекочитаемое имя)
+WB_MODULES=(
+  "custom/launcher:Лаунчер"
+  "mango/workspaces:Воркспейсы"
+  "clock:Часы"
+  "pulseaudio:Звук"
+  "network:Сеть"
+  "battery:Батарея"
+  "tray:Трей"
+  "cpu:CPU"
+  "memory:Память"
+  "backlight:Яркость"
+  "bluetooth:Bluetooth"
+  "mpris:Медиа (плеер)"
+  "idle_inhibitor:Антисон"
+  "temperature:Температура"
+  "disk:Диск"
+  "custom/settings:Настройки"
+  "custom/power:Питание"
+)
+
+wb_get_modules() {  # left|center|right → список через пробел
+  python3 -c "
+import json,sys,re
+p='$WB/config.jsonc'
+try:
+  with open(p) as f: t=f.read()
+  t=re.sub(r'//.*','',t)
+  d=json.loads(t)
+  key='modules-'+sys.argv[1]
+  print(' '.join(d.get(key,[])))
+except Exception as e:
+  print('', file=sys.stderr); sys.exit(1)
+" "$1" 2>/dev/null
+}
+
+wb_module_defaults() {
+  case "$1" in
+    backlight) cat <<'JSON'
+{"format":"{icon} {percent}%","format-icons":["󰃞","󰃟","󰃠"],"on-scroll-up":"brightnessctl set 5%+","on-scroll-down":"brightnessctl set 5%-"}
+JSON
+;;
+    bluetooth) cat <<'JSON'
+{"format":"󰂯","format-connected":"󰂱 {num_connections}","format-disabled":"󰂲","tooltip-format":"{controller_alias}\t{controller_address}","on-click":"blueman-manager"}
+JSON
+;;
+    mpris) cat <<'JSON'
+{"format":"{player_icon} {dynamic}","format-paused":"{status_icon} <i>{dynamic}</i>","player-icons":{"default":"▶","mpv":"🎵"},"status-icons":{"paused":"⏸"},"max-length":30}
+JSON
+;;
+    idle_inhibitor) cat <<'JSON'
+{"format":"{icon}","format-icons":{"activated":"󰅶","deactivated":"󰾪"},"tooltip-format-activated":"Антисон: вкл","tooltip-format-deactivated":"Антисон: выкл"}
+JSON
+;;
+    temperature) cat <<'JSON'
+{"format":" {temperatureC}°C","critical-threshold":80,"format-critical":" {temperatureC}°C"}
+JSON
+;;
+    disk) cat <<'JSON'
+{"format":"󰋊 {percentage_used}%","path":"/","tooltip-format":"{used} / {total}"}
+JSON
+;;
+    cpu) cat <<'JSON'
+{"format":"󰻠 {usage}%","tooltip":true,"interval":2}
+JSON
+;;
+    memory) cat <<'JSON'
+{"format":"󰍛 {percentage}%","tooltip-format":"{used:0.1f}G / {total:0.1f}G","interval":3}
+JSON
+;;
+    tray) cat <<'JSON'
+{"icon-size":16,"spacing":6}
+JSON
+;;
+  esac
+}
+
+wb_ensure_module_def() {
+  local mid="$1"
+  local def; def=$(wb_module_defaults "$mid")
+  [ -z "$def" ] && return 0
+  python3 - "$WB/config.jsonc" "$mid" "$def" <<'PY'
+import json,sys,re
+p, mid, def = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(p) as f: t=f.read()
+clean=re.sub(r'//.*','',t)
+d=json.loads(clean)
+if mid not in d:
+  try:
+    d[mid]=json.loads(def)
+  except Exception:
+    pass
+  with open(p,'w') as f:
+    json.dump(d,f,indent=2,ensure_ascii=False); f.write('\n')
+PY
+}
+
+wb_set_modules() {  # left|center|right  list...
+  local side="$1"; shift
+  local mods="$*"
+  # ensure defs for modules being added
+  local m
+  for m in $mods; do wb_ensure_module_def "$m"; done
+  python3 - "$WB/config.jsonc" "$side" "$mods" <<'PY'
+import json,sys,re
+p, side, mods = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(p) as f: t=f.read()
+clean=re.sub(r'//.*','',t)
+d=json.loads(clean)
+key='modules-'+side
+d[key]=mods.split() if mods.strip() else []
+with open(p,'w') as f:
+  json.dump(d,f,indent=2,ensure_ascii=False)
+  f.write('\n')
+PY
+}
+
+menu_bar_modules() {
+  while true; do
+    local left center right
+    left=$(wb_get_modules left)
+    center=$(wb_get_modules center)
+    right=$(wb_get_modules right)
+    local c
+    c=$(pick "Модули панели  (← left | center | right →)" \
+      "Слева:  ${left:-пусто}" \
+      "Центр:  ${center:-пусто}" \
+      "Справа: ${right:-пусто}" \
+      "Добавить модуль…" "Убрать модуль…" "Сбросить к умолчанию" "Назад") || return
+    case "$c" in
+      "Назад") return;;
+      "Сбросить к умолчанию")
+        wb_set_modules left "custom/launcher mango/workspaces"
+        wb_set_modules center "clock"
+        wb_set_modules right "pulseaudio network battery custom/settings custom/power"
+        bar_reload; msg "Модули сброшены";;
+      "Добавить модуль…")
+        local names=() ids=() m name id
+        for m in "${WB_MODULES[@]}"; do
+          id="${m%%:*}"; name="${m#*:}"
+          # уже есть?
+          echo " $left $center $right " | grep -q " $id " && continue
+          names+=("$name ($id)"); ids+=("$id")
+        done
+        [ ${#names[@]} -eq 0 ] && { err "Все модули уже добавлены"; continue; }
+        local sel; sel=$(pick "Какой модуль добавить?" "${names[@]}") || continue
+        local idx=0; for n in "${names[@]}"; do [ "$n" = "$sel" ] && break; idx=$((idx+1)); done
+        id="${ids[$idx]}"
+        local side; side=$(pick "Куда поставить?" "Слева" "Центр" "Справа") || continue
+        case "$side" in
+          "Слева")  wb_set_modules left  "$left $id";;
+          "Центр")  wb_set_modules center "$center $id";;
+          "Справа") wb_set_modules right "$right $id";;
+        esac
+        bar_reload; msg "Добавлен: $id";;
+      "Убрать модуль…")
+        local all="$left $center $right"
+        [ -z "${all// }" ] && { err "Нечего убирать"; continue; }
+        local choices=() 
+        for id in $all; do
+          local name="$id"
+          for m in "${WB_MODULES[@]}"; do [ "${m%%:*}" = "$id" ] && name="${m#*:}"; done
+          choices+=("$name ($id)")
+        done
+        local sel; sel=$(pick "Какой убрать?" "${choices[@]}") || continue
+        local rid="${sel##*(}"
+        rid="${rid%)}"
+        wb_set_modules left  "$(echo $left | tr ' ' '\n' | grep -v "^$rid$" | tr '\n' ' ')"
+        wb_set_modules center "$(echo $center | tr ' ' '\n' | grep -v "^$rid$" | tr '\n' ' ')"
+        wb_set_modules right "$(echo $right | tr ' ' '\n' | grep -v "^$rid$" | tr '\n' ' ')"
+        bar_reload; msg "Убран: $rid";;
+      Слева:*)
+        local order; order=$(pick "Порядок слева (сейчас: $left)" \
+          "Оставить" "Переместить первый в конец" "Переместить последний в начало") || continue
+        case "$order" in
+          "Переместить первый в конец")
+            local arr=($left); [ ${#arr[@]} -gt 1 ] && wb_set_modules left "${arr[@]:1} ${arr[0]}";;
+          "Переместить последний в начало")
+            local arr=($left); [ ${#arr[@]} -gt 1 ] && wb_set_modules left "${arr[-1]} ${arr[@]:0:${#arr[@]}-1}";;
+        esac
+        bar_reload; msg "Готово";;
+      Центр:*)
+        local order; order=$(pick "Порядок центра (сейчас: $center)" \
+          "Оставить" "Переместить первый в конец" "Переместить последний в начало") || continue
+        case "$order" in
+          "Переместить первый в конец")
+            local arr=($center); [ ${#arr[@]} -gt 1 ] && wb_set_modules center "${arr[@]:1} ${arr[0]}";;
+          "Переместить последний в начало")
+            local arr=($center); [ ${#arr[@]} -gt 1 ] && wb_set_modules center "${arr[-1]} ${arr[@]:0:${#arr[@]}-1}";;
+        esac
+        bar_reload; msg "Готово";;
+      Справа:*)
+        local order; order=$(pick "Порядок справа (сейчас: $right)" \
+          "Оставить" "Переместить первый в конец" "Переместить последний в начало") || continue
+        case "$order" in
+          "Переместить первый в конец")
+            local arr=($right); [ ${#arr[@]} -gt 1 ] && wb_set_modules right "${arr[@]:1} ${arr[0]}";;
+          "Переместить последний в начало")
+            local arr=($right); [ ${#arr[@]} -gt 1 ] && wb_set_modules right "${arr[-1]} ${arr[@]:0:${#arr[@]}-1}";;
+        esac
+        bar_reload; msg "Готово";;
+    esac
+  done
+}
+
+menu_bar() {
+  local c v; c=$(pick "Панель Waybar" \
+    "Модули панели (интерактивно)…" \
+    "Положение панели" "Высота панели" \
+    "Прозрачность панели" "Прозрачность таблеток" "Скругление таблеток" \
+    "Пресет: стекло" "Пресет: почти сплошная" \
+    "Показать/скрыть панель" "Перезапустить waybar" \
+    "Править config.jsonc" "Править style.css" "Править colors.css") || return
+  case "$c" in
+    "Модули панели (интерактивно)…") menu_bar_modules;;
+    "Положение панели")
+      v=$(pick "Положение" top bottom left right) || return
+      python3 - "$WB/config.jsonc" "$v" <<'PY'
+import json,sys,re
+p, pos = sys.argv[1], sys.argv[2]
+with open(p) as f: t=f.read()
+clean=re.sub(r'//.*','',t)
+d=json.loads(clean)
+d['position']=pos
+with open(p,'w') as f: json.dump(d,f,indent=2,ensure_ascii=False); f.write('\n')
+PY
+      pkill -x waybar; sleep 0.3; setsid waybar >/dev/null 2>&1 & msg "Положение: $v";;
+    "Высота панели")         v=$(pick "px" 26 28 30 34 38 42 48) && {
+                               sed -i "s|\"height\": [0-9]*,|\"height\": $v,|" "$WB/config.jsonc"; bar_reload; msg "Высота: ${v}px"; };;
+    "Прозрачность панели")   v=$(pick "Непрозрачность фона (ниже = прозрачнее) — сейчас $BAR_OPACITY" 0.0 0.15 0.25 0.35 0.5 0.65 0.8 0.9 1.0) \
+                             && { apply_bar "$v" "$PILL_OPACITY" "$PILL_RADIUS"; msg "Готово"; };;
+    "Прозрачность таблеток") v=$(pick "Непрозрачность таблеток — сейчас $PILL_OPACITY" 0.0 0.15 0.25 0.35 0.5 0.65 0.8 1.0) \
+                             && { apply_bar "$BAR_OPACITY" "$v" "$PILL_RADIUS"; msg "Готово"; };;
+    "Скругление таблеток")   v=$(pick "Радиус, px — сейчас $PILL_RADIUS" 0 4 6 8 10 12 14 16 20) \
+                             && { apply_bar "$BAR_OPACITY" "$PILL_OPACITY" "$v"; msg "Готово"; };;
+    "Пресет: стекло")        apply_bar 0.55 0.45 8; msg "Стекло";;
+    "Пресет: почти сплошная") apply_bar 0.95 0.85 8; msg "Почти сплошная";;
+    "Показать/скрыть панель") pkill -SIGUSR1 waybar 2>/dev/null; msg "Переключено";;
+    "Перезапустить waybar")  pkill -x waybar; sleep 0.3; setsid waybar >/dev/null 2>&1 & msg "Waybar перезапущен";;
+    "Править config.jsonc")   ${EDITOR:-nano} "$WB/config.jsonc"; bar_reload;;
+    "Править style.css")      ${EDITOR:-nano} "$WB/style.css"; bar_reload;;
+    "Править colors.css")     ${EDITOR:-nano} "$WB/colors.css"; bar_reload;;
+  esac
+}
+
+menu_terminal() {
+  local c v; c=$(pick "Терминал (foot) — применится к новым окнам" "Прозрачность" "Размер шрифта" "Отступы (pad)") || return
+  case "$c" in
+    "Прозрачность")  v=$(pick "alpha" 1.0 0.95 0.9 0.85 0.8 0.75 0.7 0.6) && { sed -i "s|^alpha=.*|alpha=$v|" "$FOOT"; msg "Готово"; };;
+    "Размер шрифта") v=$(pick "size" 10 11 12 13 14 15 16 18) && { sed -i "s|^\(font=.*:size=\).*|\1$v|" "$FOOT"; msg "Готово"; };;
+    "Отступы (pad)") v=$(ask "например 14x12" "$(grep '^pad=' "$FOOT" | cut -d= -f2)") && { sed -i "s|^pad=.*|pad=$v|" "$FOOT"; msg "Готово"; };;
+  esac
+}
+
+# ── Обои ─────────────────────────────────────────────────────────────────
+wp_list() {  # относительные пути картинок из WALLPAPER_DIR
+  find -L "$WALLPAPER_DIR" -maxdepth 3 -type f \
+    \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.bmp' \) \
+    -printf '%P\n' 2>/dev/null | sort
+}
+
+menu_matugen() {
+  local c
+  c=$(pick "Matugen (цвета из обоев) — сейчас: $([ "${COLOR_MODE:-matugen}" = "matugen" ] && echo вкл || echo выкл) / ${MATUGEN_MODE:-dark}" \
+    "Включить режим Matugen (цвета из обоев)" \
+    "Выключить Matugen (ручной акцент)" \
+    "Сгенерировать сейчас из текущих обоев" \
+    "Режим: dark / light" \
+    "Тип схемы" \
+    "Контраст (−1 … 1)" \
+    "Назад") || return
+  case "$c" in
+    "Включить режим Matugen (цвета из обоев)")
+      set_env COLOR_MODE matugen; set_env MATUGEN 1
+      msg "Режим Matugen включён"
+      "$SCR/wallpaper" matugen >/dev/null 2>&1 || true;;
+    "Выключить Matugen (ручной акцент)")
+      set_env COLOR_MODE manual; set_env MATUGEN 0
+      msg "Matugen выключен, используется ручной акцент";;
+    "Сгенерировать сейчас из текущих обоев")
+      if ! command -v matugen >/dev/null; then err "Установите matugen (AUR: matugen-bin)"; return; fi
+      set_env COLOR_MODE matugen; set_env MATUGEN 1
+      "$SCR/wallpaper" matugen && msg "Цвета обновлены" || err "Нет обоев или ошибка matugen";;
+    "Режим: dark / light")
+      v=$(pick "Режим (сейчас: ${MATUGEN_MODE:-dark})" dark light) || return
+      set_env MATUGEN_MODE "$v"; msg "Режим: $v";;
+    "Тип схемы")
+      v=$(pick "Тип схемы (пусто = tonal-spot)" \
+        "scheme-tonal-spot" "scheme-content" "scheme-expressive" "scheme-fidelity" \
+        "scheme-fruit-salad" "scheme-monochrome" "scheme-neutral" "scheme-rainbow" "scheme-vibrant" \
+        "(сбросить)") || return
+      [ "$v" = "(сбросить)" ] && v=""
+      set_env MATUGEN_TYPE "$v"; msg "Тип: ${v:-по умолчанию}";;
+    "Контраст (−1 … 1)")
+      v=$(ask "число от -1 до 1" "${MATUGEN_CONTRAST:-0}") || return
+      set_env MATUGEN_CONTRAST "$v"; msg "Контраст: $v";;
+  esac
+}
+
+menu_wallpaper() {
+  local cur="${WALLPAPER:+$(basename "$WALLPAPER")}"
+  local c; c=$(pick "Обои — сейчас: ${cur:-нет, однотонный фон}  |  папка: $WALLPAPER_DIR" \
+    "Выбрать из папки" "Случайные обои" "Сменить папку с обоями" "Режим подгонки" \
+    "Однотонный цвет" "Убрать картинку" \
+    "Matugen (цвета из обоев)…") || return
+  local v
+  case "$c" in
+    "Выбрать из папки")
+      local list; list=$(wp_list)
+      [ -n "$list" ] || { err "В $WALLPAPER_DIR нет картинок (jpg/png/webp)"; return; }
+      v=$(echo "$list" | gum filter --height 18 --placeholder "поиск по названию…" --header "Обои (Enter — поставить, Esc — назад)") || return
+      "$SCR/wallpaper" set "$WALLPAPER_DIR/$v" && msg "Обои: $v (сохранено)" || err "Не удалось";;
+    "Случайные обои")  "$SCR/wallpaper" random && msg "Случайные обои (сохранено)" || err "Картинки не найдены";;
+    "Сменить папку с обоями")
+      v=$(ask "путь к папке" "$WALLPAPER_DIR") || return
+      v="${v/#\~/$HOME}"
+      [ -d "$v" ] || { err "Нет такой папки"; return; }
+      set_env WALLPAPER_DIR "$v"; msg "Папка: $v";;
+    "Режим подгонки")
+      v=$(pick "Режим (сейчас: $WALLPAPER_MODE)" fill fit stretch center tile) || return
+      "$SCR/wallpaper" mode "$v"; msg "Режим: $v";;
+    "Однотонный цвет")
+      v=$(ask "HEX, например 1e1e2e" "$WALLPAPER_COLOR") || return
+      "$SCR/wallpaper" color "$v" && msg "Цвет применён" || err "Неверный HEX";;
+    "Убрать картинку") "$SCR/wallpaper" clear; msg "Однотонный фон";;
+    "Matugen (цвета из обоев)…") menu_matugen;;
+  esac
+}
+
+menu_keyboard() {
+  local c v; c=$(pick "Клавиатура" "Раскладки" "Переключение раскладки" "Скорость повтора" "Задержка повтора" "NumLock при старте") || return
+  case "$c" in
+    "Раскладки")
+      v=$(pick "Раскладки" "us,ru" "us,ua" "us,ru,ua" "us,de" "us" "Свои…") || return
+      [ "$v" = "Свои…" ] && { v=$(ask "например us,de") || return; }
+      set_conf xkb_rules_layout "$v"; reload; msg "Готово (может понадобиться перезайти)";;
+    "Переключение раскладки")
+      v=$(pick "Сочетание" grp:alt_shift_toggle grp:win_space_toggle grp:ctrl_shift_toggle grp:caps_toggle grp:alt_caps_toggle) \
+        && { set_conf xkb_rules_options "$v"; reload; msg "Готово"; };;
+    "Скорость повтора") set_pick repeat_rate "Повторов в секунду" 15 20 25 30 35 40 50;;
+    "Задержка повтора") set_pick repeat_delay "мс" 200 250 300 350 400 500;;
+    "NumLock при старте") toggle_conf numlock_on "NumLock";;
+  esac
+}
+
+menu_touchpad() {
+  local c; c=$(pick "Тачпад" "Тап = клик" "Тап и перетаскивание" "Отключать при наборе" "Натуральная прокрутка") || return
+  case "$c" in
+    "Тап = клик")               toggle_conf tap_to_click "Тап = клик";;
+    "Тап и перетаскивание")     toggle_conf tap_and_drag "Тап и перетаскивание";;
+    "Отключать при наборе")     toggle_conf trackpad_disable_while_typing "Отключать при наборе";;
+    "Натуральная прокрутка")    toggle_conf trackpad_natural_scrolling "Натуральная прокрутка";;
+  esac
+}
+
+menu_behavior() {
+  local c v; c=$(pick "Поведение" "Фокус за мышью" "Курсор прыгает на окно" "Фокус на активированное окно" \
+    "Прилипание плавающих окон" "Дистанция прилипания" "Скрывать курсор (сек)" "Размер курсора") || return
+  case "$c" in
+    "Фокус за мышью")                toggle_conf sloppy_focus "Фокус за мышью";;
+    "Курсор прыгает на окно")        toggle_conf warp_cursor "Курсор прыгает на окно";;
+    "Фокус на активированное окно")  toggle_conf focus_on_activate "Фокус на активированное окно";;
+    "Прилипание плавающих окон")     toggle_conf enable_floating_snap "Прилипание";;
+    "Дистанция прилипания")          set_pick snap_distance "px" 10 20 30 40 50 60;;
+    "Скрывать курсор (сек)")         set_pick cursor_hide_timeout "сек (0 = никогда)" 0 2 3 4 5 8 10;;
+    "Размер курсора")
+      v=$(pick "px" 16 20 24 28 32 48) && {
+        set_conf cursor_size "$v"; sed -i "s|^env=XCURSOR_SIZE,.*|env=XCURSOR_SIZE,$v|" "$CONF"; reload
+        msg "Готово (полностью — после перезахода)"; };;
+  esac
+}
+
+menu_tiling() {
+  local c; c=$(pick "Тайлинг" "Новое окно — главное" "Ширина главной области" "Число главных окон") || return
+  case "$c" in
+    "Новое окно — главное")      toggle_conf new_is_master "Новое окно — главное";;
+    "Ширина главной области")    set_pick default_master_factor "0.4–0.7" 0.40 0.45 0.50 0.55 0.60 0.65 0.70;;
+    "Число главных окон")        set_pick default_master_count "шт" 1 2 3;;
+  esac
+}
+
+menu_apps() {
+  local c v; c=$(pick "Приложения по умолчанию" \
+    "Браузер (Super+F): $BROWSER_CMD" "Терминал (Super+Enter): $TERMINAL_CMD" "Файлы (Super+E): $FILES_CMD") || return
+  case "$c" in
+    Браузер*)  v=$(ask "команда браузера" "$BROWSER_CMD") && set_env BROWSER_CMD "$v";;
+    Терминал*) v=$(ask "команда терминала" "$TERMINAL_CMD") && set_env TERMINAL_CMD "$v";;
+    Файлы*)    v=$(ask "команда файлового менеджера" "$FILES_CMD") && set_env FILES_CMD "$v";;
+  esac
+  msg "Сохранено"
+}
+
+menu_files() {
+  local c; c=$(pick "Файлы конфигов" "config.conf" "settings.env" "autostart.sh" "launch" "power-menu") || return
+  case "$c" in
+    "config.conf")  ${EDITOR:-nano} "$CONF"; reload;;
+    "settings.env") ${EDITOR:-nano} "$ENVF";;
+    "autostart.sh") ${EDITOR:-nano} "$SCR/autostart.sh";;
+    "launch")       ${EDITOR:-nano} "$SCR/launch";;
+    "power-menu")   ${EDITOR:-nano} "$SCR/power-menu";;
+  esac
+}
+
+# ── CLI: mango-settings accent HEX (использует install.sh) ───────────────
+if [ "$1" = accent ] && [[ "$2" =~ ^[0-9a-fA-F]{6}$ ]]; then
+  apply_accent "$2"; exit 0
+fi
+
+command -v gum >/dev/null || { echo "Нужен gum:  sudo pacman -S gum"; read -r; exit 1; }
+
+# ── Главное меню ─────────────────────────────────────────────────────────
+while true; do
+  load_env
+  clear
+  gum style --border rounded --border-foreground "#$ACCENT" --foreground "#$ACCENT" \
+            --padding "0 3" --margin "1 2" --bold "MangoWC · Настройки"
+  gum style --foreground "#7f849c" "  Super+S или Esc — закрыть"
+  echo
+  c=$(gum choose --height 17 --header "Что настроить?" \
+      "Тема и цвет (Matugen/ручной)" "Окна" "Эффекты и анимации" "Панель Waybar" "Обои" "Терминал" \
+      "Клавиатура" "Тачпад" "Поведение" "Тайлинг" "Приложения по умолчанию" \
+      "Файлы конфигов" "Применить всё" "Выход") || exit 0
+
+  case "$c" in
+    "Тема и цвет (Matugen/ручной)") menu_theme;;
+    "Окна")                     menu_windows;;
+    "Эффекты и анимации")       menu_effects;;
+    "Панель Waybar")            menu_bar;;
+    "Обои")                     menu_wallpaper;;
+    "Терминал")                 menu_terminal;;
+    "Клавиатура")               menu_keyboard;;
+    "Тачпад")                   menu_touchpad;;
+    "Поведение")                menu_behavior;;
+    "Тайлинг")                  menu_tiling;;
+    "Приложения по умолчанию")  menu_apps;;
+    "Файлы конфигов")           menu_files;;
+    "Применить всё")            reload; bar_reload; msg "Применено";;
+    "Выход")                    exit 0;;
+  esac
+done
