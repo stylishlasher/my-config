@@ -18,7 +18,9 @@
     "custom/power"
   ],
   "custom/launcher": {
-    "format": "󰣇",
+    "exec": "~/.config/waybar/scripts/distro-icon.sh",
+    "interval": "once",
+    "format": "{}",
     "tooltip": false,
     "on-click": "fuzzel"
   },
