@@ -768,11 +768,13 @@ menu_apps() {
 }
 
 dock_apply() {
-  # перегенерировать и применить; перезапуск дока в фоне, чтобы не ломать UI настроек
+  # Перегенерировать и применить синхронно: перезапуск дока меняет exclusive-зону/слои,
+  # поэтому делаем это до перерисовки меню, иначе TUI может стать "пустым" после рефлоу.
   if [ -x "$SCR/dock" ]; then
     "$SCR/dock" generate >/dev/null 2>&1 || true
     if pgrep -f "waybar.*dock.jsonc" >/dev/null 2>&1; then
-      "$SCR/dock" restart >/dev/null 2>&1 &
+      "$SCR/dock" restart >/dev/null 2>&1 || true
+      sleep 0.1
     fi
   fi
 }
