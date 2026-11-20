@@ -989,10 +989,19 @@ menu_dock() {
       "Режим: закреплён / ниже ("*")")
         v=$(pick "Режим дока" "Закреплён (всегда виден, с отступом)" "Ниже (у края экрана, всегда виден)") || continue
         case "$v" in
-          "Ниже"*) set_env DOCK_AUTOHIDE 1; msg "Док будет у самого края экрана (применится после закрытия настроек)";;
-          *)       set_env DOCK_AUTOHIDE 0; msg "Док закреплён с отступом (применится после закрытия настроек)";;
+          "Ниже"*) set_env DOCK_AUTOHIDE 1;;
+          *)       set_env DOCK_AUTOHIDE 0;;
         esac
-        dock_generate; dock_mark_pending;;
+        dock_generate
+        if dock_is_running; then
+          "$SCR/dock" restart >/dev/null 2>&1 || true
+          msg "Режим изменён, док перезапущен"
+        elif [ "${DOCK_ENABLED:-0}" = "1" ]; then
+          "$SCR/dock" start >/dev/null 2>&1 || true
+          msg "Режим изменён, док запущен"
+        else
+          msg "Режим сохранён"
+        fi;;
       "Положение ("*")")
         v=$(pick "Положение дока" bottom top left right) || continue
         set_env DOCK_POSITION "$v"; dock_generate; dock_mark_pending; msg "Положение: $v (применится после закрытия настроек)";;
