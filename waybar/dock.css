@@ -1,0 +1,86 @@
+@import "colors.css";
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  font-size: 13px;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  min-width: 0;
+  transition: background-color 0.18s ease, color 0.18s ease, opacity 0.18s ease, padding 0.18s ease, margin 0.18s ease, min-height 0.18s ease, min-width 0.18s ease;
+}
+
+window#waybar {
+  background: transparent;
+  color: @text;
+}
+
+.modules-center {
+  background: alpha(@bar_bg, 0.78);
+  border: none;
+  border-radius: 20px;
+  padding: 4px 10px;
+  margin: 2px;
+  box-shadow: none;
+}
+
+#custom-dock-sep {
+  color: alpha(@subtle, 0.35);
+  padding: 0 4px;
+  font-size: 16px;
+}
+
+/* pinned apps */
+#custom-dock-app-0,
+#custom-dock-app-1,
+#custom-dock-app-2,
+#custom-dock-app-3 {
+  font-size: 26px;
+  padding: 0 10px;
+  margin: 2px 2px;
+  border-radius: 14px;
+  color: @text;
+  background: transparent;
+}
+
+#custom-dock-app-0:hover,
+#custom-dock-app-1:hover,
+#custom-dock-app-2:hover,
+#custom-dock-app-3:hover {
+  background: alpha(@accent, 0.22);
+  color: @accent;
+}
+
+#taskbar {
+  padding: 0 4px;
+}
+
+#taskbar button {
+  padding: 2px 8px;
+  margin: 2px 2px;
+  border-radius: 14px;
+  background: transparent;
+  color: @text;
+}
+
+#taskbar button.active {
+  background: alpha(@accent, 0.24);
+}
+
+#taskbar button:hover {
+  background: alpha(@accent, 0.18);
+}
+
+#taskbar button.urgent {
+  background: alpha(@red, 0.35);
+}
+
+tooltip {
+  background: @tip;
+  border: 1px solid alpha(@accent, 0.25);
+  border-radius: 10px;
+  padding: 4px 6px;
+}
+tooltip label {
+  color: @text;
+}
