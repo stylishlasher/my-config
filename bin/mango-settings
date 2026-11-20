@@ -15,20 +15,39 @@ DOCK_CSS="$HOME/.config/waybar/dock.css"
 DOCK_APPS="$HOME/.config/mango/dock-apps.list"
 DOCK_PENDING="${XDG_RUNTIME_DIR:-/tmp}/mango-dock.pending"
 
-dock_mark_pending() { printf 1 > "$DOCK_PENDING" 2>/dev/null || true; }
+dock_mark_pending() { : > "$DOCK_PENDING" 2>/dev/null || true; }
 
-dock_apply_after_exit() {
+# Применить отложенные изменения дока ПОСЛЕ закрытия окна настроек:
+# ждём завершения самого скрипта настроек ($$), чтобы рестарт дока никогда
+# не происходил, пока жив TUI (исключает "фантомное"/пустое меню).
+dock_apply_on_exit() {
   [ -f "$DOCK_PENDING" ] || return 0
   rm -f "$DOCK_PENDING"
-  local foot_pid="$PPID"   # родитель mango-settings = окно foot (при запуске через Super+S/launch)
-  # Дождаться закрытия окна настроек и только потом перезапустить док (вне TUI, чтобы не ломать gum)
   setsid bash -c '
-    while kill -0 "$1" 2>/dev/null; do sleep 0.3; done
+    while kill -0 "$1" 2>/dev/null; do sleep 0.2; done
     sleep 0.2
     "$2" restart >/dev/null 2>&1 || true
-  ' _ "$foot_pid" "$SCR/dock" >/dev/null 2>&1 </dev/null &
+  ' _ "$$" "$SCR/dock" >/dev/null 2>&1 </dev/null &
 }
-trap dock_apply_after_exit EXIT
+trap dock_apply_on_exit EXIT
+
+# Применить сейчас: закрыть настройки, перезапустить док (без живого TUI) и
+# открыть настройки заново чистым окном — чтобы сразу увидеть результат.
+dock_apply_and_relaunch() {
+  dock_generate
+  rm -f "$DOCK_PENDING"
+  setsid bash -c '
+    while kill -0 "$1" 2>/dev/null; do sleep 0.2; done
+    "$2" restart >/dev/null 2>&1 || true
+    sleep 0.4
+    if [ -x "$3" ]; then
+      "$3" settings >/dev/null 2>&1 || true
+    else
+      foot --app-id mango-settings -e "$HOME/.local/bin/mango-settings" >/dev/null 2>&1 || true
+    fi
+  ' _ "$$" "$SCR/dock" "$SCR/launch" >/dev/null 2>&1 </dev/null &
+  exit 0
+}
 
 load_env() {
   BROWSER_CMD=librewolf; TERMINAL_CMD=foot; FILES_CMD=thunar
@@ -1000,9 +1019,9 @@ menu_dock() {
       "Закреплённые приложения…")
         menu_dock_apps || true;;
       "Применить/перезапустить док")
-        dock_generate
-        dock_mark_pending
-        msg "Применится после закрытия настроек";;
+        # Рестарт дока при живом TUI может давать "фантомное" меню, поэтому:
+        # закрываем настройки → рестарт дока → открываем настройки заново (чистое окно).
+        dock_apply_and_relaunch;;
       "Перегенерировать конфиг дока")
         dock_generate; msg "Конфиг дока сгенерирован";;
       "Редактировать dock.jsonc")
