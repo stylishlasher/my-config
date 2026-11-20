@@ -89,11 +89,12 @@ run_matugen() {
   local -a cmd=(matugen image "$img" -m "${MATUGEN_MODE:-dark}" --contrast "${MATUGEN_CONTRAST:-0}")
   [ -f "$MATUGEN_CFG" ] && cmd+=(--config "$MATUGEN_CFG")
   [ -n "${MATUGEN_TYPE:-}" ] && cmd+=(-t "$MATUGEN_TYPE")
+  # В неинтерактивном запуске matugen 4.x может упасть, если найдено несколько цветов-источников
+  cmd+=(--prefer "${MATUGEN_PREFER:-saturation}")
 
   snapshot_ui_prefs
 
-  local log
-  log="$(mktemp -t mango-matugen.XXXXXX 2>/dev/null || echo /tmp/mango-matugen.log)"
+  local log="/tmp/mango-matugen.log"
   if "${cmd[@]}" >"$log" 2>&1; then
     # hook apply-matugen-accent может выполниться чуть позже; на всякий случай фиксируем прозрачность/настройки и обновляем панели
     restore_ui_prefs
@@ -111,11 +112,12 @@ run_matugen() {
       pkill -SIGUSR2 -f "waybar.*dock.jsonc" 2>/dev/null || true
     ) >/dev/null 2>&1 &
     notify "Matugen: цвета обновлены из обоев"
-    rm -f "$log" 2>/dev/null || true
     return 0
   else
-    notify "Matugen: ошибка генерации (проверь обои/настройки)"
-    rm -f "$log" 2>/dev/null || true
+    local err
+    err=$(grep -m1 -v '^[[:space:]]*$' "$log" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | cut -c1-90 || true)
+    notify "Matugen: ошибка${err:+ — $err} (лог: $log)"
+    echo "matugen: ошибка генерации, см. $log" >&2 || true
     return 1
   fi
 }
