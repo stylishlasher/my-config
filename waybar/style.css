@@ -1,0 +1,137 @@
+@import "colors.css";
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+window#waybar {
+  background: @bar_bg;
+  color: @text;
+  border-bottom: 1px solid alpha(@accent, 0.18);
+}
+
+tooltip {
+  background: @tip;
+  border: 1px solid alpha(@accent, 0.4);
+  border-radius: 8px;
+  padding: 4px 7px;
+}
+tooltip label { color: @text; }
+
+#custom-launcher,
+#workspaces,
+#clock,
+#pulseaudio,
+#network,
+#battery,
+#tray,
+#cpu,
+#memory,
+#custom-settings,
+#custom-power {
+  background: @pill;
+  border-radius: 8px; /*pill-radius*/
+  margin: 3px 2px;
+  padding: 0 8px;
+  border: 1px solid alpha(@accent, 0.07);
+}
+
+#custom-launcher {
+  color: @accent;
+  font-size: 14px;
+  padding: 0 10px;
+  margin-left: 4px;
+}
+#custom-launcher:hover {
+  background: alpha(@accent, 0.9);
+  color: @base;
+}
+
+/* ── Рабочие столы (компактно) ── */
+#workspaces {
+  padding: 0 2px;
+}
+#workspaces button {
+  padding: 0 5px;
+  margin: 2px 0;
+  border-radius: 6px;
+  color: @subtle;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  text-shadow: none;
+  font-size: 12px;
+  min-width: 16px;
+  opacity: 0.4;
+}
+/* Есть окна */
+#workspaces button.visible,
+#workspaces button.occupied {
+  color: @text;
+  opacity: 1;
+  background: alpha(@accent, 0.18);
+}
+#workspaces button:hover {
+  background: alpha(@accent, 0.35);
+  color: @text;
+  opacity: 1;
+}
+/* Текущий */
+#workspaces button.active,
+#workspaces button.focused {
+  background: @accent;
+  color: @base;
+  opacity: 1;
+  font-weight: 700;
+}
+#workspaces button.urgent {
+  background: @red;
+  color: @base;
+  opacity: 1;
+}
+
+#clock {
+  color: @text;
+  padding: 0 10px;
+  font-weight: 600;
+}
+#clock:hover { background: alpha(@accent, 0.2); }
+
+#pulseaudio { color: @accent; }
+#pulseaudio.muted { color: @subtle; }
+#network { color: @green; }
+#network.disconnected { color: @red; }
+#battery { color: @green; }
+#battery.warning { color: @yellow; }
+#battery.charging { color: @green; }
+#battery.critical:not(.charging) {
+  background: @red;
+  color: @base;
+}
+
+#pulseaudio:hover,
+#network:hover,
+#battery:hover {
+  background: alpha(@accent, 0.2);
+}
+
+#custom-settings { color: @text; }
+#custom-settings:hover {
+  background: alpha(@accent, 0.9);
+  color: @base;
+}
+#custom-power {
+  color: @red;
+  margin-right: 4px;
+  padding: 0 9px;
+}
+#custom-power:hover {
+  background: @red;
+  color: @base;
+}

@@ -1,0 +1,29 @@
+# Matugen config for MangoWC
+# https://github.com/InioX/matugen
+
+[config]
+# default mode can be overridden by CLI
+
+[templates.waybar]
+input_path = "~/.config/matugen/templates/colors.css"
+output_path = "~/.config/waybar/colors.css"
+post_hook = "pkill -SIGUSR2 waybar 2>/dev/null || true"
+
+[templates.fuzzel]
+input_path = "~/.config/matugen/templates/fuzzel.ini"
+output_path = "~/.config/fuzzel/fuzzel.ini"
+# fuzzel doesn't hot-reload easily; next launch picks it up
+
+[templates.foot]
+input_path = "~/.config/matugen/templates/foot.ini"
+output_path = "~/.config/foot/foot.ini"
+
+[templates.mako]
+input_path = "~/.config/matugen/templates/mako"
+output_path = "~/.config/mako/config"
+post_hook = "makoctl reload 2>/dev/null || true"
+
+[templates.mango-accent]
+input_path = "~/.config/matugen/templates/accent.env"
+output_path = "~/.config/mango/matugen-accent.env"
+post_hook = "~/.config/mango/scripts/apply-matugen-accent 2>/dev/null || true"

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# screenshot        — область → файл + буфер обмена
+# screenshot full   — весь экран
+# (блюр/анимацию слоя выделения гасит layer_rule в config.conf)
+dir="$HOME/Pictures/Screenshots"; mkdir -p "$dir"
+f="$dir/$(date +%F_%H-%M-%S).png"
+
+if [ "$1" = full ]; then
+  grim "$f" || exit 1
+else
+  area=$(slurp -b '#00000000' -c '#cba6f7ff' -s '#cba6f750' -w 2) || exit 0
+  sleep 0.15
+  grim -g "$area" "$f" || exit 1
+fi
+wl-copy < "$f" 2>/dev/null
+notify-send -t 2000 "Скриншот сохранён" "$(basename "$f")" 2>/dev/null
+exit 0

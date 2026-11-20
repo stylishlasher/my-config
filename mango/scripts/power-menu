@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Меню питания
+
+choice=$(printf '%s\n' \
+  "1  Блокировка" \
+  "2  Выйти из сессии" \
+  "3  Сон" \
+  "4  Перезагрузка" \
+  "5  Выключение" \
+  | fuzzel --dmenu --lines 5 --width 26 --prompt "Питание ❯ " 2>/dev/null)
+
+case "$choice" in
+  1*|Блокировка*)
+    exec "$HOME/.config/mango/scripts/lock"
+    ;;
+  2*|Выйти*)
+    # Штатный выход mango: вернёт в экран входа (если вход через DM) или в TTY-шелл (если запускали из TTY)
+    mmsg dispatch quit 2>/dev/null || mmsg -d quit 2>/dev/null
+    sleep 1
+    pkill -TERM -x mango 2>/dev/null
+    ;;
+  3*|Сон*)
+    systemctl suspend
+    ;;
+  4*|Перезагрузка*)
+    systemctl reboot
+    ;;
+  5*|Выключение*)
+    systemctl poweroff
+    ;;
+esac

@@ -1,0 +1,316 @@
+#!/usr/bin/env bash
+# Настраиваемый док (Waybar) для MangoWC
+# dock start|stop|restart|toggle|status|generate
+set -euo pipefail
+
+CFG="$HOME/.config/waybar/dock.jsonc"
+CSS="$HOME/.config/waybar/dock.css"
+ENVF="$HOME/.config/mango/settings.env"
+APPS="$HOME/.config/mango/dock-apps.list"
+PID_PATTERN="waybar.*dock.jsonc"
+
+# defaults
+DOCK_ENABLED=0
+DOCK_POSITION=bottom
+DOCK_ICON_SIZE=26
+DOCK_HEIGHT=48
+DOCK_MARGIN=8
+DOCK_LAYER=top
+DOCK_EXCLUSIVE=0
+DOCK_BG_OPACITY=0.78
+DOCK_RADIUS=20
+DOCK_SHOW_TASKBAR=1
+DOCK_MODE=always   # always|ondemand (ondemand зарезервировано)
+
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+load_env() {
+  if [ -f "$ENVF" ]; then
+    # shellcheck disable=SC1090
+    . "$ENVF"
+  fi
+}
+
+is_running() { pgrep -f "$PID_PATTERN" >/dev/null 2>&1; }
+
+stop_dock() {
+  pkill -f "$PID_PATTERN" >/dev/null 2>&1 || true
+  sleep 0.15
+}
+
+ensure_apps_file() {
+  if [ ! -f "$APPS" ]; then
+    mkdir -p "$(dirname "$APPS")"
+    cat > "$APPS" <<'EOF'
+~/.config/mango/scripts/launch terminal||Терминал
+~/.config/mango/scripts/launch files||Файлы
+~/.config/mango/scripts/launch browser|󰈹|Браузер
+~/.config/mango/scripts/launch settings|󰒓|Настройки
+EOF
+  fi
+}
+
+generate_dock() {
+  ensure_apps_file
+  mkdir -p "$(dirname "$CFG")"
+  load_env
+
+  (
+    # экспортируем настройки, чтобы python увидел значения
+    set -a
+    # shellcheck disable=SC1090
+    [ -f "$ENVF" ] && . "$ENVF"
+    set +a
+    python3 - "$CFG" "$CSS" "$APPS" <<'PY'
+import json, os, sys
+
+cfg_path, css_path, apps_path = sys.argv[1], sys.argv[2], sys.argv[3]
+
+def env(name, default=""):
+    v = os.environ.get(name)
+    return default if v is None or v == "" else v
+
+position = env("DOCK_POSITION", "bottom")
+if position not in ("bottom", "top", "left", "right"):
+    position = "bottom"
+
+def to_int(val, default):
+    try:
+        return int(float(str(val).strip().strip('"').strip("'")))
+    except Exception:
+        return default
+
+def to_float(val, default):
+    try:
+        return float(str(val).strip().strip('"').strip("'"))
+    except Exception:
+        return default
+
+icon_size = max(14, min(72, to_int(env("DOCK_ICON_SIZE", "26"), 26)))
+height = max(28, min(120, to_int(env("DOCK_HEIGHT", "48"), 48)))
+margin = max(0, min(80, to_int(env("DOCK_MARGIN", "8"), 8)))
+exclusive = str(env("DOCK_EXCLUSIVE", "0")).strip().strip('"\'') == "1"
+show_taskbar = str(env("DOCK_SHOW_TASKBAR", "1")).strip().strip('"\'') != "0"
+bg_opacity = max(0.0, min(1.0, to_float(env("DOCK_BG_OPACITY", "0.78"), 0.78)))
+radius = max(0, min(48, to_int(env("DOCK_RADIUS", "20"), 20)))
+layer = env("DOCK_LAYER", "top")
+if layer not in ("top", "bottom", "overlay"):
+    layer = "top"
+
+# read apps
+apps = []
+try:
+    with open(apps_path, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.rstrip("\n")
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            parts = line.split("|")
+            cmd = parts[0].strip() if len(parts) > 0 else ""
+            icon = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ""
+            name = parts[2].strip() if len(parts) > 2 and parts[2].strip() else cmd
+            if cmd:
+                apps.append((cmd, icon, name))
+except FileNotFoundError:
+    pass
+
+modules_center = []
+config = {
+    "layer": layer,
+    "position": position,
+    "exclusive": bool(exclusive),
+    "passthrough": False,
+    "gtk-layer-shell": True,
+    "spacing": 6,
+    "margin-top": margin if position == "top" else 0,
+    "margin-bottom": margin if position == "bottom" else 0,
+    "margin-left": margin if position == "left" else 0,
+    "margin-right": margin if position == "right" else 0,
+    "modules-left": [],
+    "modules-center": modules_center,
+    "modules-right": [],
+}
+
+if position in ("bottom", "top"):
+    config["height"] = height
+else:
+    config["width"] = height
+
+for i, (cmd, icon, name) in enumerate(apps):
+    mid = f"custom/dock-app-{i}"
+    modules_center.append(mid)
+    config[mid] = {
+        "format": icon,
+        "tooltip": True,
+        "tooltip-format": name,
+        "on-click": cmd,
+    }
+
+if show_taskbar and apps:
+    modules_center.append("custom/dock-sep")
+    config["custom/dock-sep"] = {"format": "│", "tooltip": False}
+
+if show_taskbar:
+    modules_center.append("wlr/taskbar")
+    config["wlr/taskbar"] = {
+        "format": "{icon}",
+        "icon-size": icon_size,
+        "icon-theme": "hicolor",
+        "tooltip-format": "{title}",
+        "on-click": "activate",
+        "on-click-middle": "close",
+        "on-click-right": "minimize",
+        "all-outputs": False,
+        "ignore-list": ["mango-settings", "mango-nmtui"]
+    }
+
+with open(cfg_path, "w", encoding="utf-8") as f:
+    json.dump(config, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+
+vertical = position in ("left", "right")
+pad_main = "8px 6px" if vertical else "4px 10px"
+app_pad = "8px 10px" if vertical else "0 10px"
+task_pad = "6px 8px" if vertical else "2px 8px"
+taskbar_pad = "4px 0" if vertical else "0 4px"
+
+css = f"""@import "colors.css";
+
+* {{
+  font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  font-size: 13px;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  min-width: 0;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}}
+
+window#waybar {{
+  background: transparent;
+  color: @text;
+}}
+
+.modules-center {{
+  background: alpha(@bar_bg, {bg_opacity});
+  border: 1px solid alpha(@accent, 0.30);
+  border-radius: {radius}px;
+  padding: {pad_main};
+  margin: 2px;
+  box-shadow: 0 10px 28px alpha(#000000, 0.28);
+}}
+
+#custom-dock-sep {{
+  color: alpha(@subtle, 0.35);
+  padding: 0 4px;
+  font-size: {max(12, icon_size-10)}px;
+}}
+"""
+
+selectors = [f"#custom-dock-app-{i}" for i in range(len(apps))]
+if selectors:
+    css += "/* pinned apps */\n"
+    css += ",\n".join(selectors) + " {\n"
+    css += f"  font-size: {icon_size}px;\n"
+    css += f"  padding: {app_pad};\n"
+    css += "  margin: 2px 2px;\n  border-radius: 14px;\n  color: @text;\n  background: transparent;\n}\n\n"
+    css += ",\n".join([s+":hover" for s in selectors]) + " {\n"
+    css += "  background: alpha(@accent, 0.22);\n  color: @accent;\n}\n\n"
+
+css += f"""#taskbar {{
+  padding: {taskbar_pad};
+}}
+
+#taskbar button {{
+  padding: {task_pad};
+  margin: 2px 2px;
+  border-radius: 14px;
+  background: transparent;
+  color: @text;
+}}
+
+#taskbar button.active {{
+  background: alpha(@accent, 0.24);
+  border: 1px solid alpha(@accent, 0.35);
+}}
+
+#taskbar button:hover {{
+  background: alpha(@accent, 0.18);
+}}
+
+#taskbar button.urgent {{
+  background: alpha(@red, 0.35);
+  border: 1px solid alpha(@red, 0.45);
+}}
+
+tooltip {{
+  background: @tip;
+  border: 1px solid alpha(@accent, 0.4);
+  border-radius: 10px;
+  padding: 4px 6px;
+}}
+tooltip label {{
+  color: @text;
+}}
+"""
+
+with open(css_path, "w", encoding="utf-8") as f:
+    f.write(css)
+PY
+  )
+}
+
+start_dock() {
+  if ! have_cmd waybar; then
+    echo "waybar не найден" >&2
+    exit 1
+  fi
+  load_env
+  generate_dock
+  if is_running; then
+    stop_dock
+  fi
+  nohup waybar -c "$CFG" -s "$CSS" >/dev/null 2>&1 &
+  disown || true
+}
+
+toggle_dock() {
+  if is_running; then
+    stop_dock
+  else
+    start_dock
+  fi
+}
+
+status_dock() {
+  if is_running; then echo running; else echo stopped; fi
+}
+
+case "${1:-}" in
+  start)    start_dock ;;
+  stop)     stop_dock ;;
+  restart)  start_dock ;;
+  toggle)   toggle_dock ;;
+  generate) generate_dock ;;
+  status)   status_dock ;;
+  enable)
+    load_env
+    # best-effort: update settings env flag
+    if [ -f "$ENVF" ]; then
+      grep -v '^DOCK_ENABLED=' "$ENVF" > "$ENVF.tmp" || true
+      { cat "$ENVF.tmp" 2>/dev/null || true; echo 'DOCK_ENABLED=1'; } > "$ENVF"
+      rm -f "$ENVF.tmp"
+    fi
+    start_dock ;;
+  disable)
+    if [ -f "$ENVF" ]; then
+      grep -v '^DOCK_ENABLED=' "$ENVF" > "$ENVF.tmp" || true
+      { cat "$ENVF.tmp" 2>/dev/null || true; echo 'DOCK_ENABLED=0'; } > "$ENVF"
+      rm -f "$ENVF.tmp"
+    fi
+    stop_dock ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|toggle|status|generate|enable|disable}" >&2
+    exit 1
+    ;;
+esac

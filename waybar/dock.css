@@ -1,0 +1,22 @@
+@import "colors.css";
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+window#waybar {
+  background: transparent;
+  color: @text;
+}
+
+.modules-center {
+  background: alpha(@bar_bg, 0.78);
+  border: 1px solid alpha(@accent, 0.35);
+  border-radius: 20px;
+  padding: 4px 10px;
+  margin: 2px;
+}

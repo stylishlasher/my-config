@@ -1,0 +1,52 @@
+{
+  "layer": "top",
+  "position": "bottom",
+  "exclusive": false,
+  "height": 48,
+  "spacing": 6,
+  "margin-bottom": 8,
+  "modules-left": [],
+  "modules-center": [
+    "custom/dock-app-0",
+    "custom/dock-app-1",
+    "custom/dock-app-2",
+    "custom/dock-app-3",
+    "custom/dock-sep",
+    "wlr/taskbar"
+  ],
+  "modules-right": [],
+  "custom/dock-app-0": {
+    "format": "",
+    "tooltip-format": "Терминал",
+    "on-click": "~/.config/mango/scripts/launch terminal"
+  },
+  "custom/dock-app-1": {
+    "format": "",
+    "tooltip-format": "Файлы",
+    "on-click": "~/.config/mango/scripts/launch files"
+  },
+  "custom/dock-app-2": {
+    "format": "󰈹",
+    "tooltip-format": "Браузер",
+    "on-click": "~/.config/mango/scripts/launch browser"
+  },
+  "custom/dock-app-3": {
+    "format": "󰒓",
+    "tooltip-format": "Настройки",
+    "on-click": "~/.config/mango/scripts/launch settings"
+  },
+  "custom/dock-sep": {
+    "format": "|",
+    "tooltip": false
+  },
+  "wlr/taskbar": {
+    "format": "{icon}",
+    "icon-size": 26,
+    "icon-theme": "hicolor",
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close",
+    "on-click-right": "minimize",
+    "all-outputs": false
+  }
+}

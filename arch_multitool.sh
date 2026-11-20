@@ -95,6 +95,27 @@ APPS_MENU=(
     "keepassxc|Менеджер паролей KeePassXC|off"
 )
 
+
+# --- MangoWC (Wayland-композитор Mango) — зависимости для дотфайлов из этого репо ---
+MANGO_MENU=(
+    "fuzzel|Лаунчер приложений (нужен для меню/обоев)|on"
+    "gum|TUI для mango-settings (Super+S)|on"
+    "mako|Уведомления|on"
+    "libnotify|notify-send для скриптов|on"
+    "swaybg|Установка обоев|on"
+    "waybar|Панель|on"
+    "grim|Скриншоты (экран)|on"
+    "slurp|Выделение области для скриншотов|on"
+    "wl-clipboard|Буфер обмена Wayland|on"
+    "cliphist|История буфера обмена|on"
+    "brightnessctl|Управление яркостью|on"
+    "playerctl|Управление медиаплеером (клавиши)|on"
+    "pavucontrol|Микшер звука (GUI)|on"
+    "foot|Терминал по умолчанию в конфиге|on"
+    "swaylock|Блокировка экрана (lock script)|on"
+    "matugen-bin|Цвета из обоев (Matugen, AUR, опционально)|off"
+)
+
 # --- Консольные «приколы» (вкладка «Консольные приколы», пункт 8/15). AUR-пакеты помечены. ---
 # Все пункты по умолчанию ВЫКЛЮЧЕНЫ — ставятся только по явному выбору.
 
@@ -1378,6 +1399,108 @@ install_mpv_core() {
 
 install_mpv() { clear; install_mpv_core; pause; }
 
+
+# ------------------------------------------------------------------------------
+# 7.2 MANGOWC DOTFILES (из этого репозитория)
+# ------------------------------------------------------------------------------
+apply_mango_config() {
+    resolve_configs || return 1
+
+    local -a dirs=(mango waybar foot fuzzel mako matugen)
+    local have=0 d
+    for d in "${dirs[@]}"; do [[ -d "$CONFIGS_DIR/$d" ]] && have=1; done
+    if (( ! have )); then
+        err "MangoWC-конфиги не найдены в $CONFIGS_DIR (ожидаются каталоги: ${dirs[*]})."
+        return 1
+    fi
+
+    info "=== Применение MangoWC dotfiles ==="
+    local bk="$HOME/.config-backup-mango-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/Pictures/Screenshots" "$HOME/Pictures/Wallpapers"
+
+    # Сохраняем пользовательские настройки, если были
+    local old_env=""
+    [[ -f "$HOME/.config/mango/settings.env" ]] && old_env="$HOME/.config/mango/settings.env"
+
+    for d in "${dirs[@]}"; do
+        [[ -d "$CONFIGS_DIR/$d" ]] || continue
+        if [[ -e "$HOME/.config/$d" ]]; then
+            mkdir -p "$bk"
+            mv "$HOME/.config/$d" "$bk/"
+            info "Бэкап: ~/.config/$d -> $bk/"
+        fi
+        cp -a "$CONFIGS_DIR/$d" "$HOME/.config/$d"
+    done
+
+    # Скрипты и утилиты
+    if [[ -d "$HOME/.config/mango/scripts" ]]; then
+        chmod +x "$HOME/.config/mango/scripts/"* 2>/dev/null || true
+    fi
+    if [[ -f "$CONFIGS_DIR/bin/mango-settings" ]]; then
+        install -m755 "$CONFIGS_DIR/bin/mango-settings" "$HOME/.local/bin/mango-settings"
+        ok "Установлено: ~/.local/bin/mango-settings"
+    elif [[ -f "$HOME/.config/mango/../bin/mango-settings" ]]; then
+        : # fallback not needed
+    fi
+
+    # Слить settings.env: новые ключи добавить, пользовательские значения сохранить
+    local new_env="$HOME/.config/mango/settings.env"
+    if [[ -n "$old_env" && -f "$bk/mango/settings.env" && -f "$new_env" ]]; then
+        cp "$bk/mango/settings.env" "$new_env.merged"
+        while IFS= read -r line; do
+            [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
+            local k="${line%%=*}"
+            grep -q "^${k}=" "$bk/mango/settings.env" || echo "$line" >> "$new_env.merged"
+        done < "$new_env"
+        mv "$new_env.merged" "$new_env"
+        ok "settings.env объединён (ваши обои/акцент/настройки сохранены)."
+    fi
+
+    normalize_paths "$HOME/.config/mango" 2>/dev/null || true
+    normalize_paths "$HOME/.config/waybar" 2>/dev/null || true
+    normalize_paths "$HOME/.config/foot" 2>/dev/null || true
+    normalize_paths "$HOME/.config/fuzzel" 2>/dev/null || true
+    normalize_paths "$HOME/.config/mako" 2>/dev/null || true
+    normalize_paths "$HOME/.config/matugen" 2>/dev/null || true
+
+    ok "MangoWC dotfiles применены."
+    info "Настройки GUI: Super+S  ·  Обои: Super+W  ·  Случайные: Super+Shift+W"
+
+    # Применить в текущей сессии, если уже в Wayland
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        { mmsg dispatch reload_config || mmsg -d reload_config; } >/dev/null 2>&1 || true
+        pkill -x waybar 2>/dev/null || true
+        pkill -x mako 2>/dev/null || true
+        sleep 0.2
+        has waybar && nohup waybar &>/dev/null & disown
+        has mako   && nohup mako   &>/dev/null & disown
+        [[ -x "$HOME/.config/mango/scripts/wallpaper" ]] && nohup "$HOME/.config/mango/scripts/wallpaper" &>/dev/null & disown
+    fi
+}
+
+install_mango_deps() {
+    info "=== Зависимости MangoWC ==="
+    select_packages "MangoWC — пакеты и утилиты" "${MANGO_MENU[@]}" || { warn "Отменено."; return 1; }
+    (( ${#SELECTED_PACKAGES[@]} == 0 )) && { warn "Ничего не выбрано."; return 1; }
+    software_install_pkgs "${SELECTED_PACKAGES[@]}"
+}
+
+install_mango_core() {
+    info "=== MangoWC: зависимости + dotfiles ==="
+    echo
+    echo "Будут установлены/применены dotfiles для MangoWC:"
+    echo "  ~/.config/{mango,waybar,foot,fuzzel,mako,matugen} и ~/.local/bin/mango-settings"
+    echo
+    if confirm "Установить зависимости MangoWC (waybar, fuzzel, gum, mako, swaybg, ...)?"; then
+        install_mango_deps || warn "Часть зависимостей не установлена."
+    fi
+    apply_mango_config || return 1
+    ok "MangoWC готов. Войдите в сессию MangoWC (или перезагрузите конфиг)."
+}
+
+install_mango() { clear; install_mango_core; pause; }
+
+
 # ------------------------------------------------------------------------------
 # 8. ПРИМЕНИТЬ МОИ КОНФИГИ (без установки пакетов)
 # ------------------------------------------------------------------------------
@@ -1394,6 +1517,13 @@ apply_all_configs() {
     apply_neovide_config
     configure_hypr_kb_layout
     apply_archy_themes
+    # MangoWC dotfiles (если есть в репозитории)
+    if [[ -d "${CONFIGS_DIR:-}/mango" ]]; then
+        echo
+        if confirm "Применить MangoWC dotfiles (mango/waybar/foot/fuzzel/mako/matugen)?"; then
+            apply_mango_config || warn "MangoWC dotfiles не применены."
+        fi
+    fi
     echo
     ok "Готово. Перезапустите терминал/приложения, чтобы увидеть изменения."
     pause
@@ -2084,6 +2214,7 @@ full_setup() {
     echo " 11. Консольные приколы — по галочкам (игры, фетчи, визуализации, CLI...)"
     echo " 12. Файрвол (ufw / firewalld — по выбору)"
     echo " 13. Применение тем Serpantinum (archy, авто-поиск)"
+    echo " 14. MangoWC dotfiles (если есть в репозитории, по выбору)"
     echo
     gpu_drivers_notice
     confirm "Начать полную установку?" || { warn "Отменено."; pause; return; }
@@ -2129,6 +2260,12 @@ full_setup() {
 
     configure_firewall
     apply_archy_themes
+    if [[ -d "${CONFIGS_DIR:-}/mango" ]] || { resolve_configs >/dev/null 2>&1 && [[ -d "${CONFIGS_DIR:-}/mango" ]]; }; then
+        echo
+        if confirm "Установить/применить MangoWC dotfiles из репозитория?"; then
+            install_mango_core || warn "MangoWC dotfiles не применены."
+        fi
+    fi
 
     echo
     ok "Полная установка завершена! Рекомендуется перезагрузка."
@@ -2175,9 +2312,10 @@ main_menu() {
         echo -e "  ${GREEN}13)${NC} Установить утилиты для архивов (Xarchiver и др.)"
         echo -e "  ${GREEN}14)${NC} Настроить файрвол (ufw / firewalld)"
         echo -e "  ${GREEN}15)${NC} Установить консольные приколы (игры, фетчи, визуализации, CLI...)"
+        echo -e "  ${GREEN}16)${NC} MangoWC: зависимости + применить dotfiles"
         echo -e "  ${RED}0)${NC} Выход"
         echo
-        read -rp "Номер пункта [0-15]: " choice
+        read -rp "Номер пункта [0-16]: " choice
 
         case "$choice" in
             1) full_setup ;;
@@ -2195,6 +2333,7 @@ main_menu() {
             13) install_archive_tools ;;
             14) configure_firewall ;;
             15) install_fun_tools ;;
+            16) install_mango ;;
             0) clear; echo "До связи!"; exit 0 ;;
             *) err "Неверный пункт меню"; sleep 1 ;;
         esac
