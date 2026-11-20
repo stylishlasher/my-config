@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# toggle-scroller — переключает раскладку scroller <-> tile (для бинда Super+Shift+0)
+set -euo pipefail
+
+get_layout() {
+  mmsg -g -l 2>/dev/null | head -n1 | awk '{
+    for (i = 1; i <= NF; i++) {
+      if ($i == "layout" && i < NF) { print $(i + 1); found = 1; exit }
+    }
+  } END {
+    if (!found && NF > 0) print $NF
+  }'
+}
+
+cur="$(get_layout || true)"
+case "$cur" in
+  scroller|scroll*|S) target="tile" ;;
+  *) target="scroller" ;;
+esac
+
+mmsg -d setlayout,"$target" >/dev/null 2>&1 \
+  || mmsg -d setlayout "$target" >/dev/null 2>&1 \
+  || mmsg -s -d setlayout,"$target" >/dev/null 2>&1 \
+  || mmsg dispatch setlayout,"$target" >/dev/null 2>&1 \
+  || mmsg dispatch setlayout "$target" >/dev/null 2>&1 \
+  || true
+
+exit 0
