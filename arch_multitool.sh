@@ -1420,81 +1420,23 @@ install_mpv() { clear; install_mpv_core; pause; }
 apply_mango_config() {
     resolve_configs || return 1
 
-    local -a dirs=(mango waybar foot fuzzel mako matugen)
-    local have=0 d
-    for d in "${dirs[@]}"; do [[ -d "$CONFIGS_DIR/$d" ]] && have=1; done
-    if (( ! have )); then
-        err "MangoWC-конфиги не найдены в $CONFIGS_DIR (ожидаются каталоги: ${dirs[*]})."
-        return 1
+    # Единый источник правды: используем mango/install.sh из репозитория/конфигов,
+    # чтобы не расходилась логика установки/бэкапа/слияния настроек.
+    if [[ -f "$CONFIGS_DIR/mango/install.sh" ]]; then
+        info "=== Применение MangoWC dotfiles ==="
+        bash "$CONFIGS_DIR/mango/install.sh" || return 1
+        # Доп. безопасность: нормализовать старые жёстко прописанные пути, если встретятся
+        normalize_paths "$HOME/.config/mango" 2>/dev/null || true
+        normalize_paths "$HOME/.config/waybar" 2>/dev/null || true
+        normalize_paths "$HOME/.config/foot" 2>/dev/null || true
+        normalize_paths "$HOME/.config/fuzzel" 2>/dev/null || true
+        normalize_paths "$HOME/.config/mako" 2>/dev/null || true
+        normalize_paths "$HOME/.config/matugen" 2>/dev/null || true
+        return 0
     fi
 
-    info "=== Применение MangoWC dotfiles ==="
-    local bk="$HOME/.config-backup-mango-$(date +%Y%m%d_%H%M%S)"
-    mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/Pictures/Screenshots" "$HOME/Pictures/Wallpapers"
-
-    # Сохраняем пользовательские настройки, если были
-    local old_env=""
-    [[ -f "$HOME/.config/mango/settings.env" ]] && old_env="$HOME/.config/mango/settings.env"
-
-    for d in "${dirs[@]}"; do
-        [[ -d "$CONFIGS_DIR/$d" ]] || continue
-        if [[ -e "$HOME/.config/$d" ]]; then
-            mkdir -p "$bk"
-            mv "$HOME/.config/$d" "$bk/"
-            info "Бэкап: ~/.config/$d -> $bk/"
-        fi
-        cp -a "$CONFIGS_DIR/$d" "$HOME/.config/$d"
-    done
-
-    # Скрипты и утилиты
-    if [[ -d "$HOME/.config/mango/scripts" ]]; then
-        chmod +x "$HOME/.config/mango/scripts/"* 2>/dev/null || true
-    fi
-    if [[ -f "$CONFIGS_DIR/bin/mango-settings" ]]; then
-        install -m755 "$CONFIGS_DIR/bin/mango-settings" "$HOME/.local/bin/mango-settings"
-        ok "Установлено: ~/.local/bin/mango-settings"
-    elif [[ -f "$HOME/.config/mango/../bin/mango-settings" ]]; then
-        : # fallback not needed
-    fi
-
-    # Слить settings.env: новые ключи добавить, пользовательские значения/комментарии сохранить
-    local new_env="$HOME/.config/mango/settings.env"
-    if [[ -n "$old_env" && -f "$bk/mango/settings.env" && -f "$new_env" ]]; then
-        local merged
-        merged="$(mktemp "$HOME/.config/mango/.settings.env.XXXXXX")"
-        cp "$bk/mango/settings.env" "$merged"
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
-            local k="${line%%=*}"
-            if ! grep -q "^${k}=" "$merged" 2>/dev/null; then
-                printf '%s
-' "$line" >> "$merged"
-            fi
-        done < "$new_env"
-        mv "$merged" "$new_env"
-        ok "settings.env объединён (ваши обои/акцент/настройки сохранены)."
-    fi
-
-    normalize_paths "$HOME/.config/mango" 2>/dev/null || true
-    normalize_paths "$HOME/.config/waybar" 2>/dev/null || true
-    normalize_paths "$HOME/.config/foot" 2>/dev/null || true
-    normalize_paths "$HOME/.config/fuzzel" 2>/dev/null || true
-    normalize_paths "$HOME/.config/mako" 2>/dev/null || true
-    normalize_paths "$HOME/.config/matugen" 2>/dev/null || true
-
-    ok "MangoWC dotfiles применены."
-    info "Настройки GUI: Super+S  ·  Обои: Super+W  ·  Случайные: Super+Shift+W  ·  Блокировка: Super+L"
-
-    # Применить в текущей сессии, если уже в Wayland
-    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
-        { mmsg dispatch reload_config || mmsg -d reload_config; } >/dev/null 2>&1 || true
-        pkill -x waybar 2>/dev/null || true
-        pkill -x mako 2>/dev/null || true
-        sleep 0.2
-        has waybar && nohup waybar &>/dev/null & disown
-        has mako   && nohup mako   &>/dev/null & disown
-        [[ -x "$HOME/.config/mango/scripts/wallpaper" ]] && nohup "$HOME/.config/mango/scripts/wallpaper" &>/dev/null & disown
-    fi
+    err "MangoWC-конфиги не найдены в $CONFIGS_DIR (ожидается mango/install.sh)."
+    return 1
 }
 
 install_mango_deps() {

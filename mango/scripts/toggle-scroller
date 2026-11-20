@@ -27,8 +27,8 @@ parse_layout_output() {
   local out="$1"
   [ -n "$out" ] || return 1
 
-  # Явные имена
-  if printf '%s\n' "$out" | grep -Eqi 'scroller|scroll'; then
+  # Явные имена раскладок (без слишком широкого совпадения "scroll" в заголовках окон)
+  if printf '%s\n' "$out" | grep -Eqi '(^|[[:space:]",:{])scroller([[:space:]",}:]|$)'; then
     echo "scroller"; return 0
   fi
   if printf '%s\n' "$out" | grep -Eqi '(^|[[:space:]",:{])(tile|tiling)([[:space:]",}]|$)'; then
@@ -57,7 +57,7 @@ parse_layout_output() {
     END { if (!found && NF>0) { v=$NF; gsub(/[",:]/, "", v); print v } }
   ' | head -n1 | tr -d '\r')
   case "$name" in
-    scroller|scroll*|S|Scroller) echo "scroller"; return 0 ;;
+    scroller|S|Scroller) echo "scroller"; return 0 ;;
     tile|tiling|T|Tile|tiled) echo "tile"; return 0 ;;
   esac
   return 1

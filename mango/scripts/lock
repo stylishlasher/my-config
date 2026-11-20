@@ -81,7 +81,6 @@ if "$LOCK_BIN" --help 2>&1 | grep -Eq -- '--effect-blur|--screenshots|--clock'; 
 fi
 
 FONT="JetBrainsMono Nerd Font"
-[ -f "$ENVF" ] && : # placeholder for future font setting
 
 COMMON_ARGS=(
   --indicator

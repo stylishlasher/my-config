@@ -345,18 +345,22 @@ case "${1:-}" in
   enable)
     load_env
     mkdir -p "$(dirname "$ENVF")"; touch "$ENVF"
+    if command -v flock >/dev/null 2>&1; then exec 9>"$ENVF.lock"; flock 9; fi
     tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")"
     grep -v '^DOCK_ENABLED=' "$ENVF" > "$tmp" 2>/dev/null || true
     printf '%s\n' 'DOCK_ENABLED=1' >> "$tmp"
     mv "$tmp" "$ENVF"
+    if command -v flock >/dev/null 2>&1; then flock -u 9 2>/dev/null || true; exec 9>&- 2>/dev/null || true; fi
     start_dock ;;
   disable)
     load_env
     mkdir -p "$(dirname "$ENVF")"; touch "$ENVF"
+    if command -v flock >/dev/null 2>&1; then exec 9>"$ENVF.lock"; flock 9; fi
     tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")"
     grep -v '^DOCK_ENABLED=' "$ENVF" > "$tmp" 2>/dev/null || true
     printf '%s\n' 'DOCK_ENABLED=0' >> "$tmp"
     mv "$tmp" "$ENVF"
+    if command -v flock >/dev/null 2>&1; then flock -u 9 2>/dev/null || true; exec 9>&- 2>/dev/null || true; fi
     stop_dock ;;
   *)
     echo "Usage: $0 {start|stop|restart|toggle|status|generate|enable|disable}" >&2

@@ -59,7 +59,7 @@ if [ "${NIGHT_LIGHT:-0}" = "1" ]; then
   case "$temp" in ''|*[!0-9]*) temp=4500 ;; esac
   if command -v wlsunset >/dev/null 2>&1; then
     pkill -x wlsunset >/dev/null 2>&1 || true
-    wlsunset -T "$temp" -t "$((temp > 3500 ? temp - 500 : temp))" >/dev/null 2>&1 &
+    wlsunset -T 6500 -t "$temp" >/dev/null 2>&1 &
   elif command -v gammastep >/dev/null 2>&1; then
     pkill -x gammastep >/dev/null 2>&1 || true
     gammastep -O "$temp" >/dev/null 2>&1 &
@@ -79,6 +79,9 @@ if command -v swayidle >/dev/null 2>&1; then
     pkill -x swayidle >/dev/null 2>&1 || true
     # Сбрасываем предыдущие аргументы и собираем нужные
     set -- -w
+    if [ -x "$HOME/.config/mango/scripts/lock" ]; then
+      set -- "$@" before-sleep "$HOME/.config/mango/scripts/lock"
+    fi
     if [ "$lock_s" -gt 0 ] && [ -x "$HOME/.config/mango/scripts/lock" ]; then
       set -- "$@" timeout "$lock_s" "$HOME/.config/mango/scripts/lock"
     fi
