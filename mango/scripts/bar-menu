@@ -13,6 +13,11 @@ load_env() {
   ACCENT=cba6f7
   WEATHER_LOCATION=""
   [ -f "$ENVF" ] && . "$ENVF" 2>/dev/null || true
+  # нормализовать (убрать кавычки/пробелы по краям)
+  WEATHER_LOCATION="${WEATHER_LOCATION#\"}"; WEATHER_LOCATION="${WEATHER_LOCATION%\"}"
+  WEATHER_LOCATION="${WEATHER_LOCATION#\'}"; WEATHER_LOCATION="${WEATHER_LOCATION%\'}"
+  WEATHER_LOCATION="${WEATHER_LOCATION#${WEATHER_LOCATION%%[![:space:]]*}}"
+  WEATHER_LOCATION="${WEATHER_LOCATION%${WEATHER_LOCATION##*[![:space:]]}}"
 }
 
 # Атомарно записать/обновить ключ в settings.env
@@ -66,36 +71,102 @@ require_gum() {
 header() {
   clear
   gum style --border rounded --border-foreground "#${ACCENT}" --foreground "#${ACCENT}" \
-    --padding "0 2" --bold "$1"
-  echo
+    --padding "0 2" --margin "0 0 1 0" --bold "$1"
 }
 
-# ── CLOCK: календарь + погода + прогноз + локация ─────────────────────────
+# ── CLOCK: календарь + погода + прогноз (город задаётся вручную) ─────────
 weather_fetch() {
   local loc="$1" q
-  if [ -n "$loc" ]; then
-    q="${loc// /+}"
-  else
-    q=""
-  fi
-  # wttr.in: текущая погода + прогноз (JSON), компактный вывод ниже
+  [ -n "$loc" ] || return 0
+  # wttr.in принимает город/координаты; пробелы заменяем на +
+  q="${loc// /+}"
+  # Убираем ведущие/лишние слэши на всякий случай
+  q="${q#/}"
   curl -fsS --max-time 8 "https://wttr.in/${q}?lang=ru&M&format=j1" 2>/dev/null
 }
 
 weather_render() {
-  local json="$1" loc_label="$2"
+  local json="$1" req_loc="$2"
   if [ -z "$json" ]; then
-    echo "  Не удалось получить погоду (нет сети или сервис недоступен)."
+    gum style --foreground "#f38ba8" "  Не удалось получить погоду."
+    gum style --foreground "#7f849c" "  Проверьте сеть и название города, затем нажмите «Обновить»."
     return 0
   fi
-  python3 - "$loc_label" <<'PY' "$json" 2>/dev/null || echo "  Ошибка разбора данных погоды."
+
+  # Текущая погода
+  local current
+  current="$(python3 - "$req_loc" <<'PY' "$json" 2>/dev/null
 import json, sys
 
-loc_label = sys.argv[1] if len(sys.argv) > 1 else ""
+req_loc = sys.argv[1] if len(sys.argv) > 1 else ""
 try:
-    data = json.loads(sys.argv[2]) if len(sys.argv) > 2 else json.loads(sys.stdin.read())
+    data = json.loads(sys.argv[2])
 except Exception:
-    print("  Ошибка разбора данных погоды.")
+    sys.exit(1)
+
+def pick_desc(arr):
+    if not arr:
+        return ""
+    v = arr[0].get('lang_ru') or arr[0].get('value') or ""
+    if isinstance(v, list) and v:
+        v = v[0].get('value', '')
+    return str(v).strip()
+
+cur = (data.get('current_condition') or [{}])[0]
+area = (data.get('nearest_area') or [{}])[0]
+place = req_loc
+try:
+    an = (area.get('areaName') or [{}])[0].get('value', '').strip()
+    cn = (area.get('country') or [{}])[0].get('value', '').strip()
+    if an or cn:
+        place = ", ".join([x for x in [an, cn] if x])
+except Exception:
+    pass
+
+desc = pick_desc(cur.get('lang_ru') or cur.get('weatherDesc') or [])
+temp = cur.get('temp_C', '?')
+feels = cur.get('FeelsLikeC', '?')
+hum = cur.get('humidity', '?')
+wind = cur.get('windspeedKmph', '?')
+
+icon = "🌡"
+d = desc.lower()
+if any(k in d for k in ["гроза", "thunder"]): icon = "⛈"
+elif any(k in d for k in ["снег", "snow", "метель", "поземок"]): icon = "❄"
+elif any(k in d for k in ["дожд", "rain", "лив", "морос"]): icon = "🌧"
+elif any(k in d for k in ["туман", "fog", "mist", "дымк"]): icon = "🌫"
+elif any(k in d for k in ["пасмур", "overcast", "облач"]): icon = "☁"
+elif any(k in d for k in ["ясн", "sun", "clear"]): icon = "☀"
+elif any(k in d for k in ["перемен", "partly", "облачно с прояснениями"]): icon = "⛅"
+
+print(f"PLACE::{place}")
+print(f"HEAD::{icon}  {temp}°C  ·  {desc or '—'}")
+print(f"META::Ощущается {feels}°C   •   Влажность {hum}%   •   Ветер {wind} км/ч")
+PY
+)"
+  if [ -z "$current" ]; then
+    gum style --foreground "#f38ba8" "  Ошибка разбора данных погоды."
+    return 0
+  fi
+
+  local place head meta
+  place="$(printf '%s\n' "$current" | sed -n 's/^PLACE:://p' | head -n1)"
+  head="$(printf '%s\n' "$current"  | sed -n 's/^HEAD:://p'  | head -n1)"
+  meta="$(printf '%s\n' "$current"  | sed -n 's/^META:://p'  | head -n1)"
+
+  gum style --foreground "#cdd6f4" --bold "  󰖐  ${place:-$req_loc}"
+  gum style --foreground "#89dceb" --bold "  ${head:-—}"
+  gum style --foreground "#7f849c" "  ${meta:-}"
+  echo
+
+  # Прогноз на 3 дня
+  local forecast
+  forecast="$(python3 - <<'PY' "$json" 2>/dev/null
+import json, sys, datetime
+
+try:
+    data = json.loads(sys.argv[1])
+except Exception:
     sys.exit(0)
 
 def pick_desc(arr):
@@ -103,89 +174,125 @@ def pick_desc(arr):
         return ""
     v = arr[0].get('lang_ru') or arr[0].get('value') or ""
     if isinstance(v, list) and v:
-        v = v[0].get('value','')
-    return str(v)
+        v = v[0].get('value', '')
+    return str(v).strip()
 
-cur = (data.get('current_condition') or [{}])[0]
-area = (data.get('nearest_area') or [{}])[0]
-place = ""
-try:
-    an = area.get('areaName', [{}])[0].get('value','')
-    cn = area.get('country', [{}])[0].get('value','')
-    place = ", ".join([x for x in [an, cn] if x])
-except Exception:
-    place = ""
-if loc_label and not place:
-    place = loc_label
-if place:
-    print(f"  Локация: {place}")
-desc = pick_desc(cur.get('lang_ru') or cur.get('weatherDesc') or [])
-temp = cur.get('temp_C','?')
-feels = cur.get('FeelsLikeC','?')
-hum = cur.get('humidity','?')
-wind = cur.get('windspeedKmph','?')
-print(f"  Сейчас: {temp}°C, ощущается {feels}°C  {('· ' + desc) if desc else ''}")
-print(f"  Влажность: {hum}%   Ветер: {wind} км/ч")
-print()
-print("  Прогноз:")
-days = data.get('weather') or []
+def icon_for(desc):
+    d = (desc or "").lower()
+    if any(k in d for k in ["гроза", "thunder"]): return "⛈"
+    if any(k in d for k in ["снег", "snow", "метель", "поземок"]): return "❄"
+    if any(k in d for k in ["дожд", "rain", "лив", "морос"]): return "🌧"
+    if any(k in d for k in ["туман", "fog", "mist", "дымк"]): return "🌫"
+    if any(k in d for k in ["пасмур", "overcast"]): return "☁"
+    if any(k in d for k in ["облач", "перемен", "partly"]): return "⛅"
+    if any(k in d for k in ["ясн", "sun", "clear"]): return "☀"
+    return "•"
+
 ru_days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
-for d in days[:3]:
-    date = d.get('date','')
+today = datetime.date.today()
+labels = {0: "Сегодня", 1: "Завтра"}
+
+days = data.get('weather') or []
+for i, d in enumerate(days[:3]):
+    date_s = d.get('date','')
     try:
-        import datetime
-        dt = datetime.datetime.strptime(date, '%Y-%m-%d')
-        wd = ru_days[dt.weekday()]
-        dlabel = f"{wd} {dt.strftime('%d.%m')}"
+        dt = datetime.datetime.strptime(date_s, '%Y-%m-%d').date()
+        label = labels.get(i, ru_days[dt.weekday()] + dt.strftime(' %d.%m'))
     except Exception:
-        dlabel = date
+        label = labels.get(i, date_s or f'День {i+1}')
     maxt = d.get('maxtempC','?')
     mint = d.get('mintempC','?')
     hourly = d.get('hourly') or []
     mid = hourly[len(hourly)//2] if hourly else {}
-    ddesc = pick_desc(mid.get('lang_ru') or mid.get('weatherDesc') or [])
-    print(f"   • {dlabel}: {mint}..{maxt}°C  {ddesc}")
+    desc = pick_desc(mid.get('lang_ru') or mid.get('weatherDesc') or [])
+    ic = icon_for(desc)
+    # выравнивание колонок
+    print(f"{label:<10}  {ic}  {mint:>3}..{maxt:<3}°C   {desc}")
 PY
+)"
+  if [ -n "$forecast" ]; then
+    gum style --foreground "#a6adc8" --bold "  Прогноз"
+    while IFS= read -r line; do
+      [ -n "$line" ] && gum style --foreground "#cdd6f4" "    $line"
+    done <<< "$forecast"
+  fi
+}
+
+prompt_city() {
+  local current="${WEATHER_LOCATION:-}" nl
+  nl=$(gum input \
+    --prompt "Город › " \
+    --placeholder "Например: Moscow, Berlin, Almaty, London" \
+    --value "$current") || return 1
+  nl="${nl#${nl%%[![:space:]]*}}"; nl="${nl%${nl##*[![:space:]]}}"
+  if [ -z "$nl" ]; then
+    gum style --foreground "#f9e2af" "  Город не указан."
+    sleep 0.8
+    return 1
+  fi
+  set_env WEATHER_LOCATION "$nl"
+  load_env
+  return 0
 }
 
 menu_clock() {
   require_gum
   load_env
   while true; do
-    header "Время · Календарь · Погода"
-    gum style --foreground "#cdd6f4" --bold "  $(date '+%A, %d %B %Y  %H:%M:%S')"
-    echo
+    header "Календарь и погода"
+
+    # Время
+    local time_block
+    time_block="$(printf '%s\n%s' \
+      "$(gum style --foreground "#${ACCENT}" --bold "  $(date '+%H:%M:%S')")" \
+      "$(gum style --foreground "#bac2de" "  $(date '+%A, %d %B %Y')")")"
+    gum style --border rounded --border-foreground "#45475a" --padding "0 2" --margin "0 0 1 0" "$time_block"
+
+    # Календарь
     if have cal; then
-      cal -m 2>/dev/null | sed 's/^/  /' || cal 2>/dev/null | sed 's/^/  /' || true
-      echo
+      local cal_out
+      cal_out="$(cal -m 2>/dev/null || cal 2>/dev/null || true)"
+      if [ -n "$cal_out" ]; then
+        gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" \
+          --foreground "#a6adc8" "$cal_out"
+      fi
     fi
 
-    local loc_disp="${WEATHER_LOCATION:-авто (по IP)}"
-    gum style --foreground "#7f849c" "  Погода  [локация: ${loc_disp}]"
+    # Погода
+    if [ -z "${WEATHER_LOCATION:-}" ]; then
+      local no_city
+      no_city="$(printf '%s\n\n%s\n%s' \
+        "$(gum style --foreground "#cdd6f4" --bold "󰖐  Погода")" \
+        "$(gum style --foreground "#7f849c" "Город не указан.")" \
+        "$(gum style --foreground "#7f849c" "Укажите название вашего города, чтобы видеть погоду и прогноз.")")"
+      gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" "$no_city"
+      echo
+      local c0
+      c0=$(gum choose --height 6 --header "Действие" \
+        "Указать город" \
+        "Закрыть") || exit 0
+      case "$c0" in
+        "Указать город") prompt_city || true ;;
+        *) exit 0 ;;
+      esac
+      continue
+    fi
+
+    gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" \
+      "$(gum style --foreground "#cdd6f4" --bold "󰖐  Погода")"
     local wjson
-    wjson="$(weather_fetch "${WEATHER_LOCATION:-}")"
-    weather_render "$wjson" "$loc_disp" | sed 's/^/ /'
+    wjson="$(weather_fetch "$WEATHER_LOCATION")"
+    weather_render "$wjson" "$WEATHER_LOCATION"
     echo
 
     local c
-    c=$(gum choose --height 10 --header "Действие" \
+    c=$(gum choose --height 8 --header "Действие" \
       "Обновить" \
-      "Сменить локацию" \
-      "Авто-локация (по IP)" \
+      "Сменить город" \
       "Закрыть") || exit 0
     case "$c" in
       "Обновить") continue ;;
-      "Сменить локацию")
-        local nl
-        nl=$(gum input --placeholder "Город или координаты (напр. Moscow, Berlin, 55.75,37.61)" --value "${WEATHER_LOCATION:-}") || continue
-        nl="${nl#${nl%%[![:space:]]*}}"; nl="${nl%${nl##*[![:space:]]}}"
-        set_env WEATHER_LOCATION "$nl"
-        load_env
-        ;;
-      "Авто-локация (по IP)")
-        set_env WEATHER_LOCATION ""
-        load_env
-        ;;
+      "Сменить город") prompt_city || true ;;
       "Закрыть"|*) exit 0 ;;
     esac
   done
