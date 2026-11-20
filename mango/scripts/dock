@@ -344,19 +344,19 @@ case "${1:-}" in
   status)   status_dock ;;
   enable)
     load_env
-    # best-effort: update settings env flag
-    if [ -f "$ENVF" ]; then
-      grep -v '^DOCK_ENABLED=' "$ENVF" > "$ENVF.tmp" || true
-      { cat "$ENVF.tmp" 2>/dev/null || true; echo 'DOCK_ENABLED=1'; } > "$ENVF"
-      rm -f "$ENVF.tmp"
-    fi
+    mkdir -p "$(dirname "$ENVF")"; touch "$ENVF"
+    tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")"
+    grep -v '^DOCK_ENABLED=' "$ENVF" > "$tmp" 2>/dev/null || true
+    printf '%s\n' 'DOCK_ENABLED=1' >> "$tmp"
+    mv "$tmp" "$ENVF"
     start_dock ;;
   disable)
-    if [ -f "$ENVF" ]; then
-      grep -v '^DOCK_ENABLED=' "$ENVF" > "$ENVF.tmp" || true
-      { cat "$ENVF.tmp" 2>/dev/null || true; echo 'DOCK_ENABLED=0'; } > "$ENVF"
-      rm -f "$ENVF.tmp"
-    fi
+    load_env
+    mkdir -p "$(dirname "$ENVF")"; touch "$ENVF"
+    tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")"
+    grep -v '^DOCK_ENABLED=' "$ENVF" > "$tmp" 2>/dev/null || true
+    printf '%s\n' 'DOCK_ENABLED=0' >> "$tmp"
+    mv "$tmp" "$ENVF"
     stop_dock ;;
   *)
     echo "Usage: $0 {start|stop|restart|toggle|status|generate|enable|disable}" >&2

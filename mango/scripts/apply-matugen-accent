@@ -14,13 +14,20 @@ WB_COLORS="$WB/colors.css"
 ACCENT="${ACCENT#\#}"
 [[ "$ACCENT" =~ ^[0-9a-fA-F]{6}$ ]] || exit 0
 
+mkdir -p "$(dirname "$ENVF")"
 touch "$ENVF"
 
 set_env_kv() {
-  local k="$1" v="$2"
-  grep -v "^${k}=" "$ENVF" > "$ENVF.tmp" 2>/dev/null || true
-  printf '%s=%s\n' "$k" "$v" >> "$ENVF.tmp"
-  mv "$ENVF.tmp" "$ENVF"
+  local k="$1" v="$2" tmp found=0
+  tmp="$(mktemp "$(dirname "$ENVF")/.settings.env.XXXXXX")" || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      "${k}="*) printf '%s=%s\n' "$k" "$v" >> "$tmp"; found=1 ;;
+      *)        printf '%s\n' "$line" >> "$tmp" ;;
+    esac
+  done < "$ENVF"
+  [ "$found" = 1 ] || printf '%s=%s\n' "$k" "$v" >> "$tmp"
+  mv "$tmp" "$ENVF"
 }
 
 # Записать акцент и зафиксировать режим Matugen

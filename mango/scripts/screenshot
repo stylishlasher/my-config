@@ -5,6 +5,13 @@
 # (блюр/анимацию слоя выделения гасит layer_rule в config.conf)
 set -euo pipefail
 
+ENVF="$HOME/.config/mango/settings.env"
+[ -f "$ENVF" ] && . "$ENVF" 2>/dev/null || true
+ACCENT_HEX="${ACCENT:-cba6f7}"; ACCENT_HEX="${ACCENT_HEX#\#}"
+[[ "$ACCENT_HEX" =~ ^[0-9a-fA-F]{6}$ ]] || ACCENT_HEX="cba6f7"
+SLURP_COLOR="#${ACCENT_HEX}ff"
+SLURP_SEL="#${ACCENT_HEX}50"
+
 dir="$HOME/Pictures/Screenshots"
 mkdir -p "$dir"
 f="$dir/$(date +%F_%H-%M-%S).png"
@@ -21,7 +28,7 @@ case "${1:-}" in
   edit|satty)
     command -v grim >/dev/null 2>&1 || { echo "grim не найден" >&2; exit 1; }
     command -v slurp >/dev/null 2>&1 || { echo "slurp не найден" >&2; exit 1; }
-    area=$(slurp -b '#00000000' -c '#cba6f7ff' -s '#cba6f750' -w 2) || exit 0
+    area=$(slurp -b '#00000000' -c "$SLURP_COLOR" -s "$SLURP_SEL" -w 2) || exit 0
     sleep 0.15
     grim -g "$area" "$f" || exit 1
     if command -v satty >/dev/null 2>&1; then
@@ -40,7 +47,7 @@ case "${1:-}" in
   *)
     command -v grim >/dev/null 2>&1 || { echo "grim не найден" >&2; exit 1; }
     command -v slurp >/dev/null 2>&1 || { echo "slurp не найден" >&2; exit 1; }
-    area=$(slurp -b '#00000000' -c '#cba6f7ff' -s '#cba6f750' -w 2) || exit 0
+    area=$(slurp -b '#00000000' -c "$SLURP_COLOR" -s "$SLURP_SEL" -w 2) || exit 0
     sleep 0.15
     grim -g "$area" "$f" || exit 1
     wl-copy < "$f" 2>/dev/null || true

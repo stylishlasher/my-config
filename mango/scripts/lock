@@ -1,67 +1,90 @@
 #!/usr/bin/env bash
-# Красивая блокировка экрана (Catppuccin Mocha + blur если есть swaylock-effects)
+# Блокировка экрана (swaylock / swaylock-effects)
+# Использует акцент из настроек/Matugen, если доступен; корректно сообщает об отсутствии swaylock.
+set -uo pipefail
 
-# Цвета Catppuccin Mocha
+ENVF="$HOME/.config/mango/settings.env"
+WB_COLORS="$HOME/.config/waybar/colors.css"
+
+notify_err() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -u critical "Блокировка экрана" "$1" 2>/dev/null || true
+  fi
+  echo "lock: $1" >&2
+}
+
+# Определить бинарь swaylock (swaylock-effects обычно тоже называется swaylock)
+LOCK_BIN=""
+if command -v swaylock >/dev/null 2>&1; then
+  LOCK_BIN="$(command -v swaylock)"
+elif command -v swaylock-effects >/dev/null 2>&1; then
+  LOCK_BIN="$(command -v swaylock-effects)"
+fi
+
+if [ -z "$LOCK_BIN" ]; then
+  notify_err "Не найден swaylock. Установите пакет swaylock (или swaylock-effects)."
+  exit 1
+fi
+
+# Значения по умолчанию (Catppuccin Mocha, fallback)
+ACCENT="cba6f7"
+TEXT="cdd6f4"
+INSIDE="1e1e2eee"
 RING="313244"
 RING_CLEAR="f5e0dc"
 RING_CAPS="fab387"
 RING_VER="89b4fa"
-RING_WRONG="eba0ac"
-INSIDE="1e1e2eee"
+RING_WRONG="f38ba8"
 KEY_HL="a6e3a1"
-TEXT="cdd6f4"
 BS_HL="f5e0dc"
-ACCENT="cba6f7"
+BG_COLOR="1e1e2e"
 
-# Пробуем swaylock-effects (скриншот + блюр + часы) — самый красивый вариант
-if command -v swaylock-effects >/dev/null 2>&1 || swaylock --help 2>&1 | grep -q "effect-blur\|screenshots"; then
-  exec swaylock \
-    --screenshots \
-    --clock \
-    --timestr "%H:%M" \
-    --datestr "%a, %d %b" \
-    --indicator \
-    --indicator-radius 110 \
-    --indicator-thickness 8 \
-    --effect-blur 8x4 \
-    --effect-vignette 0.3:0.3 \
-    --fade-in 0.25 \
-    --grace 1 \
-    --font "JetBrainsMono Nerd Font" \
-    --font-size 22 \
-    --ring-color "$RING" \
-    --ring-clear-color "$RING_CLEAR" \
-    --ring-caps-lock-color "$RING_CAPS" \
-    --ring-ver-color "$RING_VER" \
-    --ring-wrong-color "$RING_WRONG" \
-    --inside-color "$INSIDE" \
-    --inside-clear-color "$INSIDE" \
-    --inside-caps-lock-color "$INSIDE" \
-    --inside-ver-color "$INSIDE" \
-    --inside-wrong-color "$INSIDE" \
-    --key-hl-color "$KEY_HL" \
-    --bs-hl-color "$BS_HL" \
-    --text-color "$TEXT" \
-    --text-clear-color "$RING_CLEAR" \
-    --text-caps-lock-color "$RING_CAPS" \
-    --text-ver-color "$RING_VER" \
-    --text-wrong-color "$RING_WRONG" \
-    --line-color 00000000 \
-    --separator-color 00000000 \
-    --layout-bg-color 00000000 \
-    --layout-border-color 00000000 \
-    --layout-text-color "$TEXT"
+# Подтянуть акцент/текст из настроек и цветов Waybar, если есть
+if [ -f "$ENVF" ]; then
+  # shellcheck disable=SC1090
+  . "$ENVF" 2>/dev/null || true
+fi
+[ -n "${ACCENT:-}" ] && ACCENT="${ACCENT#\#}"
+
+if [ -f "$WB_COLORS" ] && command -v python3 >/dev/null 2>&1; then
+  read -r ACCENT_HEX TEXT_HEX BASE_HEX < <(python3 - "$WB_COLORS" "${ACCENT:-}" <<'PY' 2>/dev/null || echo ""
+import re, sys
+path, fb = sys.argv[1], sys.argv[2]
+vals = {}
+try:
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            m = re.match(r'@define-color\s+([a-zA-Z0-9_-]+)\s+#([0-9a-fA-F]{6})\s*;', line.strip())
+            if m:
+                vals[m.group(1)] = m.group(2).lower()
+except Exception:
+    pass
+accent = vals.get('accent', fb or 'cba6f7').lower()
+text = vals.get('text', 'cdd6f4').lower()
+base = vals.get('base', '1e1e2e').lower()
+print(accent, text, base)
+PY
+  )
+  if [[ "${ACCENT_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then ACCENT="$ACCENT_HEX"; fi
+  if [[ "${TEXT_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then TEXT="$TEXT_HEX"; fi
+  if [[ "${BASE_HEX:-}" =~ ^[0-9a-fA-F]{6}$ ]]; then BG_COLOR="$BASE_HEX"; INSIDE="${BASE_HEX}ee"; fi
 fi
 
-# Обычный swaylock — красивые цвета + картинка если есть
-IMG=""
-if [ -f "$HOME/.config/mango/settings.env" ]; then
-  . "$HOME/.config/mango/settings.env"
-  [ -n "$WALLPAPER" ] && [ -f "$WALLPAPER" ] && IMG="$WALLPAPER"
+# Производные цвета от акцента (простая тонировка без внешних зависимостей не идеальна,
+# поэтому используем акцент как основной highlight, а состояния — различимые фиксированные оттенки)
+RING_VER="$ACCENT"
+KEY_HL="$ACCENT"
+
+HAS_EFFECTS=0
+if "$LOCK_BIN" --help 2>&1 | grep -Eq -- '--effect-blur|--screenshots|--clock'; then
+  HAS_EFFECTS=1
 fi
 
-ARGS=(
-  -f
+FONT="JetBrainsMono Nerd Font"
+[ -f "$ENVF" ] && : # placeholder for future font setting
+
+COMMON_ARGS=(
+  --indicator
   --indicator-radius 110
   --indicator-thickness 8
   --ring-color "$RING"
@@ -82,12 +105,39 @@ ARGS=(
   --text-ver-color "$RING_VER"
   --text-wrong-color "$RING_WRONG"
   --line-color 00000000
+  --line-clear-color 00000000
+  --line-caps-lock-color 00000000
+  --line-ver-color 00000000
+  --line-wrong-color 00000000
   --separator-color 00000000
-  --font "JetBrainsMono Nerd Font"
+  --layout-bg-color 00000000
+  --layout-border-color 00000000
+  --layout-text-color "$TEXT"
+  --font "$FONT"
 )
 
+if [ "$HAS_EFFECTS" = "1" ]; then
+  exec "$LOCK_BIN" \
+    --screenshots \
+    --clock \
+    --indicator \
+    --timestr "%H:%M" \
+    --datestr "%A, %d %B" \
+    --effect-blur 10x5 \
+    --effect-vignette 0.25:0.55 \
+    --fade-in 0.2 \
+    "${COMMON_ARGS[@]}" \
+    "$@"
+fi
+
+# Обычный swaylock: используем обои как фон, если заданы
+IMG=""
+if [ -n "${WALLPAPER:-}" ] && [ -f "${WALLPAPER:-}" ]; then
+  IMG="$WALLPAPER"
+fi
+
 if [ -n "$IMG" ]; then
-  exec swaylock "${ARGS[@]}" -i "$IMG" -s fill
+  exec "$LOCK_BIN" -f -i "$IMG" -s fill "${COMMON_ARGS[@]}" "$@"
 else
-  exec swaylock "${ARGS[@]}" -c 1e1e2e
+  exec "$LOCK_BIN" -f -c "$BG_COLOR" "${COMMON_ARGS[@]}" "$@"
 fi

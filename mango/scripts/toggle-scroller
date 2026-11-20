@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 # toggle-scroller — переключает раскладку scroller <-> tile (бинд Super+`)
-# Совместимо с mmsg CLI: "mmsg get ..." / "mmsg dispatch setlayout,<name>"
-# Лог: /tmp/mango-toggle-scroller.log
+# Совместимо с mmsg: "mmsg get ..." / "mmsg dispatch setlayout,<name>"
 set -u
 
-LOG="/tmp/mango-toggle-scroller.log"
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/mango-toggle-scroller.log"
 STATE="${XDG_CACHE_HOME:-$HOME/.cache}/mango-layout-toggle"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
 log() {
+  mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
   printf '%s %s\n' "$(date '+%F %T' 2>/dev/null || echo now)" "$*" >>"$LOG" 2>/dev/null || true
 }
 
-# Пробуем выполнить команду (аргументы передаются как есть)
 try_run() {
   log "try: $*"
   if "$@" >/dev/null 2>&1; then
@@ -23,81 +22,80 @@ try_run() {
   return 1
 }
 
-# Определить текущую раскладку (scroller/tile), если возможно
-get_layout() {
-  local out name c
+# Попытаться распознать текущую раскладку по выводу mmsg
+parse_layout_output() {
+  local out="$1"
+  [ -n "$out" ] || return 1
 
-  # Запросы, которые могут содержать текущую раскладку
-  local -a qcmds=(
-    "mmsg get all-monitors"
-    "mmsg get focusing-client"
-    "mmsg get cursorpos"
-    "mmsg get all-tags"
-  )
-
-  # Если удастся узнать имя монитора — спросим его напрямую
-  local mon=""
-  out=$(mmsg get cursorpos 2>/dev/null || true)
-  if [ -n "$out" ]; then
-    log "query 'mmsg get cursorpos' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 220)"
-    # пробуем вытащить имя монитора (часто последнее поле или поле monitor/name)
-    mon=$(printf '%s\n' "$out" | sed -n 's/.*"monitor"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
-    [ -z "$mon" ] && mon=$(printf '%s\n' "$out" | sed -n 's/.*monitor[[:space:]:=]\+\([^[:space:],}"]\+\).*/\1/p' | head -n1)
+  # Явные имена
+  if printf '%s\n' "$out" | grep -Eqi 'scroller|scroll'; then
+    echo "scroller"; return 0
   fi
-  if [ -z "$mon" ]; then
-    out=$(mmsg get focusing-client 2>/dev/null || true)
-    if [ -n "$out" ]; then
-      log "query 'mmsg get focusing-client' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 220)"
+  if printf '%s\n' "$out" | grep -Eqi '(^|[[:space:]",:{])(tile|tiling)([[:space:]",}]|$)'; then
+    echo "tile"; return 0
+  fi
+
+  # Символы/поля layout/layout_symbol
+  if printf '%s\n' "$out" | grep -Eq '"layout"[[:space:]]*:[[:space:]]*"(S|scroller)"|layout_symbol[[:space:]:=]+S([[:space:]]|$)|(^|[[:space:]])layout[[:space:]:=]+S([[:space:]]|$)'; then
+    echo "scroller"; return 0
+  fi
+  if printf '%s\n' "$out" | grep -Eq '"layout"[[:space:]]*:[[:space:]]*"(T|tile|tiling)"|layout_symbol[[:space:]:=]+T([[:space:]]|$)|(^|[[:space:]])layout[[:space:]:=]+(T|tile|tiling)([[:space:]]|$)'; then
+    echo "tile"; return 0
+  fi
+
+  # Последнее слово/значение layout как fallback
+  local name
+  name=$(printf '%s\n' "$out" | awk '
+    {
+      for (i=1; i<=NF; i++) {
+        k=$i; gsub(/[",:]/, "", k)
+        if ((k=="layout" || k=="lt" || k=="layout_name" || k=="layout_symbol") && i<NF) {
+          v=$(i+1); gsub(/[",:]/, "", v); print v; found=1; exit
+        }
+      }
+    }
+    END { if (!found && NF>0) { v=$NF; gsub(/[",:]/, "", v); print v } }
+  ' | head -n1 | tr -d '\r')
+  case "$name" in
+    scroller|scroll*|S|Scroller) echo "scroller"; return 0 ;;
+    tile|tiling|T|Tile|tiled) echo "tile"; return 0 ;;
+  esac
+  return 1
+}
+
+get_layout() {
+  local out mon parsed
+
+  # 1) Попробовать определить текущий монитор
+  mon=""
+  for q in "mmsg get cursorpos" "mmsg get focusing-client"; do
+    out=$($q 2>/dev/null || true)
+    [ -n "$out" ] || continue
+    log "query '$q' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 240)"
+    if [ -z "$mon" ]; then
       mon=$(printf '%s\n' "$out" | sed -n 's/.*"monitor"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
       [ -z "$mon" ] && mon=$(printf '%s\n' "$out" | sed -n 's/.*monitor[[:space:]:=]\+\([^[:space:],}"]\+\).*/\1/p' | head -n1)
     fi
-  fi
+  done
+
+  # 2) Сначала монитор-специфичные запросы (наиболее надёжно)
   if [ -n "$mon" ]; then
-    qcmds=("mmsg get monitor $mon" "mmsg get tags $mon" "${qcmds[@]}")
+    for q in "mmsg get monitor $mon" "mmsg get tags $mon"; do
+      out=$($q 2>/dev/null || true)
+      [ -n "$out" ] || continue
+      log "query '$q' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 240)"
+      parsed="$(parse_layout_output "$out" || true)"
+      if [ -n "$parsed" ]; then echo "$parsed"; return 0; fi
+    done
   fi
 
-  for c in "${qcmds[@]}"; do
-    # shellcheck disable=SC2086
-    out=$($c 2>/dev/null || true)
+  # 3) Общие запросы
+  for q in "mmsg get all-monitors" "mmsg get all-tags" "mmsg get focusing-client"; do
+    out=$($q 2>/dev/null || true)
     [ -n "$out" ] || continue
-    # cursorpos/focusing-client могли уже логироваться выше
-    case "$c" in
-      "mmsg get cursorpos"|"mmsg get focusing-client") ;;
-      *) log "query '$c' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 220)" ;;
-    esac
-
-    # Явные имена раскладок
-    if printf '%s\n' "$out" | grep -Eqi 'scroller|scroll'; then
-      echo "scroller"; return 0
-    fi
-    if printf '%s\n' "$out" | grep -Eqi '(^|[[:space:]",:{])(tile|tiling)([[:space:]",}]|$)'; then
-      echo "tile"; return 0
-    fi
-
-    # Короткие обозначения (S/T) в полях layout
-    if printf '%s\n' "$out" | grep -Eq '"layout"[[:space:]]*:[[:space:]]*"S"|(^|[[:space:]])layout[[:space:]:=]+S([[:space:]]|$)|\blayout_symbol[[:space:]:=]+S\b'; then
-      echo "scroller"; return 0
-    fi
-    if printf '%s\n' "$out" | grep -Eq '"layout"[[:space:]]*:[[:space:]]*"(T|tile|tiling)"|(^|[[:space:]])layout[[:space:]:=]+(T|tile|tiling)([[:space:]]|$)|\blayout_symbol[[:space:]:=]+T\b'; then
-      echo "tile"; return 0
-    fi
-
-    # "... layout <name>"
-    name=$(printf '%s\n' "$out" | awk '
-      {
-        for (i = 1; i <= NF; i++) {
-          k=$i; gsub(/[",:]/, "", k)
-          if ((k == "layout" || k == "lt" || k == "layout_name") && i < NF) {
-            v=$(i+1); gsub(/[",:]/, "", v); print v; found=1; exit
-          }
-        }
-      }
-      END { if (!found && NF > 0) { v=$NF; gsub(/[",:]/, "", v); print v } }
-    ' | head -n1 | tr -d '\r')
-    case "$name" in
-      scroller|scroll*|S|Scroller) echo "scroller"; return 0 ;;
-      tile|tiling|T|Tile|tiled) echo "tile"; return 0 ;;
-    esac
+    case "$q" in "mmsg get focusing-client") ;; *) log "query '$q' => $(printf '%s' "$out" | tr '\n' ' ' | head -c 240)";; esac
+    parsed="$(parse_layout_output "$out" || true)"
+    if [ -n "$parsed" ]; then echo "$parsed"; return 0; fi
   done
 
   return 1
@@ -117,15 +115,11 @@ dispatch_setlayout() {
 
   local name
   for name in "${names[@]}"; do
-    # Основной синтаксис по справке: mmsg dispatch <func>[,arg...]
     try_run mmsg dispatch "setlayout,$name" && return 0
     try_run mmsg dispatch setlayout "$name" && return 0
     try_run mmsg dispatch "setlayout,$name,0" && return 0
-
-    # Совместимость с другими вариантами CLI
     try_run mmsg -d "setlayout,$name" && return 0
     try_run mmsg -s -d "setlayout,$name" && return 0
-    try_run mmsg setlayout "$name" && return 0
   done
 
   log "dispatch failed for target=$target"
@@ -133,7 +127,7 @@ dispatch_setlayout() {
 }
 
 if ! have mmsg; then
-  log "mmsg not found in PATH=$PATH"
+  log "mmsg not found in PATH=${PATH:-}"
   exit 0
 fi
 
@@ -141,8 +135,6 @@ log "---- toggle-scroller start (pid=$$) ----"
 log "mmsg=$(command -v mmsg 2>/dev/null || echo '?')"
 
 cur="$(get_layout || true)"
-
-# Если не удалось определить текущую раскладку — toggle через state-файл
 if [ -z "$cur" ]; then
   prev="$(cat "$STATE" 2>/dev/null || echo tile)"
   case "$prev" in
@@ -159,10 +151,13 @@ case "$cur" in
   *) target="scroller" ;;
 esac
 
-dispatch_setlayout "$target" || true
-
-mkdir -p "$(dirname "$STATE")" 2>/dev/null || true
-printf '%s\n' "$target" >"$STATE" 2>/dev/null || true
-log "result: cur='$cur' target='$target'"
+if dispatch_setlayout "$target"; then
+  mkdir -p "$(dirname "$STATE")" 2>/dev/null || true
+  printf '%s\n' "$target" >"$STATE" 2>/dev/null || true
+  log "result: cur='$cur' target='$target'"
+else
+  # Не обновляем state при неуспехе, чтобы следующий toggle не «залипал» неверно
+  log "result: failed to switch from cur='$cur' to '$target'"
+fi
 
 exit 0

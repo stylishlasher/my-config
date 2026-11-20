@@ -108,11 +108,16 @@ MANGO_MENU=(
     "slurp|Выделение области для скриншотов|on"
     "wl-clipboard|Буфер обмена Wayland|on"
     "cliphist|История буфера обмена|on"
-    "brightnessctl|Управление яркостью|on"
+    "brightnessctl|Управление яркости|on"
     "playerctl|Управление медиаплеером (клавиши)|on"
     "pavucontrol|Микшер звука (GUI)|on"
     "foot|Терминал по умолчанию в конфиге|on"
-    "swaylock|Блокировка экрана (lock script)|on"
+    "swaylock|Блокировка экрана (Super+L)|on"
+    "python|Нужен для mango-settings/скриптов дока и Matugen-хелперов|on"
+    "networkmanager|Сеть (в т.ч. nmtui, используется в Waybar/доке)|on"
+    "swayidle|Автоблокировка/сон по таймеру (опционально)|off"
+    "wlsunset|Ночной свет (опционально, альтернатива gammastep)|off"
+    "satty|Редактор скриншотов (Super+Print, опционально)|off"
     "matugen-bin|Цвета из обоев (Matugen, AUR, опционально)|off"
 )
 
@@ -408,7 +413,16 @@ select_packages() {
             --checklist "Пробел — отметить/снять, Enter — подтвердить:" \
             22 80 14 "${args[@]}" 3>&1 1>&2 2>&3) || return 1
         # whiptail возвращает список в кавычках: "pkg1" "pkg2"
-        eval "SELECTED_PACKAGES=($out)"
+        SELECTED_PACKAGES=()
+        if [[ -n "$out" ]]; then
+            if command -v python3 >/dev/null 2>&1; then
+                mapfile -t SELECTED_PACKAGES < <(python3 -c 'import shlex,sys; [print(x) for x in shlex.split(sys.stdin.read())]' <<< "$out")
+            else
+                # fallback: shlex-подобный разбор недоступен без python3
+                # shellcheck disable=SC2206
+                eval "SELECTED_PACKAGES=($out)"
+            fi
+        fi
         return 0
     fi
 
@@ -1443,16 +1457,21 @@ apply_mango_config() {
         : # fallback not needed
     fi
 
-    # Слить settings.env: новые ключи добавить, пользовательские значения сохранить
+    # Слить settings.env: новые ключи добавить, пользовательские значения/комментарии сохранить
     local new_env="$HOME/.config/mango/settings.env"
     if [[ -n "$old_env" && -f "$bk/mango/settings.env" && -f "$new_env" ]]; then
-        cp "$bk/mango/settings.env" "$new_env.merged"
-        while IFS= read -r line; do
+        local merged
+        merged="$(mktemp "$HOME/.config/mango/.settings.env.XXXXXX")"
+        cp "$bk/mango/settings.env" "$merged"
+        while IFS= read -r line || [[ -n "$line" ]]; do
             [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
             local k="${line%%=*}"
-            grep -q "^${k}=" "$bk/mango/settings.env" || echo "$line" >> "$new_env.merged"
+            if ! grep -q "^${k}=" "$merged" 2>/dev/null; then
+                printf '%s
+' "$line" >> "$merged"
+            fi
         done < "$new_env"
-        mv "$new_env.merged" "$new_env"
+        mv "$merged" "$new_env"
         ok "settings.env объединён (ваши обои/акцент/настройки сохранены)."
     fi
 
@@ -1464,7 +1483,7 @@ apply_mango_config() {
     normalize_paths "$HOME/.config/matugen" 2>/dev/null || true
 
     ok "MangoWC dotfiles применены."
-    info "Настройки GUI: Super+S  ·  Обои: Super+W  ·  Случайные: Super+Shift+W"
+    info "Настройки GUI: Super+S  ·  Обои: Super+W  ·  Случайные: Super+Shift+W  ·  Блокировка: Super+L"
 
     # Применить в текущей сессии, если уже в Wayland
     if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then

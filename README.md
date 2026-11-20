@@ -31,7 +31,7 @@
 ### Что внутри
 
 - **`mango/`** — основной конфиг MangoWC (`config.conf`), пользовательские настройки (`settings.env`), скрипты (`scripts/`) и локальный установщик (`mango/install.sh`).
-  - Автозапуск: обои (`swaybg`), `mako`, `waybar`, история буфера (`cliphist`).
+  - Автозапуск: обои, `mako`, `waybar`, история буфера (`cliphist`), polkit-агент (если найден), опционально док/ночной свет (`wlsunset`/`gammastep`)/автоблокировка (`swayidle`).
   - Удобные правила окон (floating для настроек/микшера/сетей/калькулятора/PiP и т.д.).
   - Улучшенные бинды: навигация, ресайз, скриншоты, медиа/громкость/яркость, обзор, меню питания, обои, буфер обмена.
 - **`waybar/`** — компактная настраиваемая панель (Catppuccin-совместимая палитра, прозрачность/«таблетки», кликабельные модули).
@@ -78,14 +78,19 @@ bash arch_multitool.sh
 sudo pacman -S --needed \
   fuzzel gum mako libnotify swaybg waybar \
   grim slurp wl-clipboard cliphist \
-  brightnessctl playerctl pavucontrol foot swaylock
+  brightnessctl playerctl pavucontrol foot swaylock \
+  python networkmanager
 ```
 
 Опционально:
 
 - **`matugen`** (`matugen-bin` из AUR) — генерация палитры/акцента из текущих обоев.
 - **`satty`** — редактор/аннотации скриншотов (открывается по `Super+Print`).
+- **`swayidle`** — автоблокировка/сон по таймерам (`IDLE_LOCK`/`IDLE_SUSPEND` в `~/.config/mango/settings.env`, секунды; `0` = выкл.).
+- **`wlsunset`** или **`gammastep`** — ночной свет (`NIGHT_LIGHT=1`, `NIGHT_TEMP` в `~/.config/mango/settings.env`).
+- polkit-агент (например `polkit-kde-agent` / `polkit-gnome`) — для GUI-запросов прав; `autostart.sh` попытается запустить найденный агент автоматически.
 - `wl-paste`/`wl-copy` уже входят в `wl-clipboard`; для истории буфера нужен `cliphist`.
+- `nmtui` входит в пакет `networkmanager` (используется для быстрого открытия настроек сети из Waybar/дока).
 - шрифты с иконками: например `ttf-jetbrains-mono-nerd` (для корректных иконок в Waybar/foot/fuzzel).
 
 > Точный набор зависимостей можно выбрать чек-листом в мультитуле (пункт 16).
@@ -102,6 +107,7 @@ sudo pacman -S --needed \
 | `Super + W` | Выбор обоев |
 | `Super + Shift + W` | Случайные обои |
 | `Super + B` | Меню питания |
+| `Super + L` | Блокировка экрана (`swaylock`/`swaylock-effects`) |
 | `Super + C` | История буфера обмена |
 | `Super + Shift + C` | Очистить историю буфера |
 | `Super + Q` | Закрыть окно |
@@ -117,6 +123,7 @@ sudo pacman -S --needed \
 | `Super + \`` | Переключить раскладку **scroller/tile** (прокручиваемый режим туда-обратно, если поддерживается MangoWC) |
 | `Super + Shift + R` | Перезагрузить конфиг MangoWC |
 | `Super + Shift + B` | Показать/скрыть Waybar |
+| `Super + Shift + D` | Показать/скрыть док (если настроен) |
 | `Print` | Скриншот области (файл + буфер) |
 | `Super + Print` | Скриншот области → открыть в **satty** (редактор/аннотации) |
 | `Shift + Print` | Скриншот всего экрана |
