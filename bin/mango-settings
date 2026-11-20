@@ -13,6 +13,22 @@ SCR="$HOME/.config/mango/scripts"
 DOCK_CFG="$HOME/.config/waybar/dock.jsonc"
 DOCK_CSS="$HOME/.config/waybar/dock.css"
 DOCK_APPS="$HOME/.config/mango/dock-apps.list"
+DOCK_PENDING="${XDG_RUNTIME_DIR:-/tmp}/mango-dock.pending"
+
+dock_mark_pending() { printf 1 > "$DOCK_PENDING" 2>/dev/null || true; }
+
+dock_apply_after_exit() {
+  [ -f "$DOCK_PENDING" ] || return 0
+  rm -f "$DOCK_PENDING"
+  local foot_pid="$PPID"   # родитель mango-settings = окно foot (при запуске через Super+S/launch)
+  # Дождаться закрытия окна настроек и только потом перезапустить док (вне TUI, чтобы не ломать gum)
+  setsid bash -c '
+    while kill -0 "$1" 2>/dev/null; do sleep 0.3; done
+    sleep 0.2
+    "$2" restart >/dev/null 2>&1 || true
+  ' _ "$foot_pid" "$SCR/dock" >/dev/null 2>&1 </dev/null &
+}
+trap dock_apply_after_exit EXIT
 
 load_env() {
   BROWSER_CMD=librewolf; TERMINAL_CMD=foot; FILES_CMD=thunar
@@ -777,22 +793,14 @@ dock_restyle() {
   [ -x "$SCR/dock" ] && "$SCR/dock" restyle >/dev/null 2>&1 || true
 }
 
-dock_restart_detached() {
-  # Отложенный/отвязанный рестарт: нужен для изменений конфига (позиция, exclusive, слой и т.д.)
-  [ -x "$SCR/dock" ] || return 0
-  if [ -x "$SCR/dock" ]; then
-    if "$SCR/dock" status 2>/dev/null | grep -q '^running$'; then
-      setsid nohup "$SCR/dock" restart >/dev/null 2>&1 </dev/null &
-    fi
-  fi
-}
-
 dock_apply() {
-  # Явное применение: регенерация и отвязанный рестарт запущенного дока
+  # Отложить применение конфига дока до закрытия окна настроек.
+  # Рестарт дока меняет exclusive-зону/слои и может ломать живой TUI, поэтому
+  # реальный restart выполняется в trap EXIT после закрытия foot.
   [ -x "$SCR/dock" ] || return 0
   "$SCR/dock" generate >/dev/null 2>&1 || true
   if "$SCR/dock" status 2>/dev/null | grep -q '^running$'; then
-    setsid nohup "$SCR/dock" restart >/dev/null 2>&1 </dev/null &
+    dock_mark_pending
   fi
 }
 
@@ -841,9 +849,9 @@ menu_dock_apps() {
     case "$c" in
       "Назад") return 1;;
       "Восстановить по умолчанию")
-        dock_default_apps; dock_generate; msg "Список приложений сброшен"; return 0;;
+        dock_default_apps; dock_generate; dock_mark_pending; msg "Список приложений сброшен (применится после закрытия настроек)"; return 0;;
       "Редактировать файл вручную")
-        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; msg "Сохранено"; return 0;;
+        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_mark_pending; msg "Сохранено (применится после закрытия настроек)"; return 0;;
       "Добавить приложение")
         local cmd icon name
         cmd=$(ask "Команда запуска (напр. firefox или ~/.config/mango/scripts/launch terminal)") || continue
@@ -851,7 +859,7 @@ menu_dock_apps() {
         icon=$(ask "Иконка Nerd Font (напр.  или 󰈹)" "") || continue
         name=$(ask "Название (подсказка)" "$cmd") || continue
         printf '%s|%s|%s\n' "$cmd" "$icon" "$name" >> "$DOCK_APPS"
-        dock_generate; msg "Добавлено: $name"; return 0;;
+        dock_generate; dock_mark_pending; msg "Добавлено: $name (применится после закрытия настроек)"; return 0;;
       "Удалить приложение")
         [ ${#labels[@]} -eq 0 ] && { err "Нечего удалять"; continue; }
         local sel; sel=$(pick "Что удалить?" "${labels[@]}") || continue
@@ -870,7 +878,7 @@ menu_dock_apps() {
           echo "$line" >> "$tmp"; out_i=$((out_i+1))
         done < "$DOCK_APPS"
         mv "$tmp" "$DOCK_APPS"
-        dock_generate; msg "Удалено"; return 0;;
+        dock_generate; dock_mark_pending; msg "Удалено (применится после закрытия настроек)"; return 0;;
       *)
         # tap on existing entry -> quick actions
         local sel="$c" idx=-1 i
@@ -895,7 +903,7 @@ menu_dock_apps() {
               fi
               out_i=$((out_i+1))
             done < "$DOCK_APPS"
-            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Изменено"; return 0;;
+            mv "$tmp" "$DOCK_APPS"; dock_generate; dock_mark_pending; msg "Изменено (применится после закрытия настроек)"; return 0;;
           "Удалить")
             local tmp="$DOCK_APPS.tmp"; : > "$tmp"; local out_i=0
             while IFS= read -r line || [ -n "$line" ]; do
@@ -905,7 +913,7 @@ menu_dock_apps() {
               [ "$out_i" -eq "$idx" ] || echo "$line" >> "$tmp"
               out_i=$((out_i+1))
             done < "$DOCK_APPS"
-            mv "$tmp" "$DOCK_APPS"; dock_generate; msg "Удалено"; return 0;;
+            mv "$tmp" "$DOCK_APPS"; dock_generate; dock_mark_pending; msg "Удалено (применится после закрытия настроек)"; return 0;;
         esac
         ;;
     esac
@@ -913,15 +921,6 @@ menu_dock_apps() {
 }
 
 menu_dock() {
-  local dock_needs_restart=0
-  dock_apply_pending() {
-    # Применить отложенные изменения конфига (position/exclusive/layer/height/taskbar/apps и т.д.)
-    # Перезапуск меняет exclusive-зону и может вызывать рефлоу — делаем detached и без \033c.
-    if [ "${dock_needs_restart:-0}" = 1 ]; then
-      dock_restart_detached
-      dock_needs_restart=0
-    fi
-  }
   while true; do
     load_env
     clear
@@ -947,11 +946,12 @@ menu_dock() {
       "Применить/перезапустить док" \
       "Перегенерировать конфиг дока" \
       "Редактировать dock.jsonc" "Редактировать dock.css" "Редактировать dock-apps.list" \
-      "Назад") || { dock_apply_pending; return; }
+      "Назад") || return
     local v
     case "$c" in
-      "Назад") dock_apply_pending; return;;
-      "Показать/скрыть док сейчас") dock_toggle_runtime; sleep 0.2;;
+      "Назад") return;;
+      "Показать/скрыть док сейчас")
+        dock_toggle_runtime; sleep 0.2;;
       "Автозапуск дока: вкл/выкл ("*")")
         if [ "${DOCK_ENABLED:-0}" = "1" ]; then
           set_env DOCK_ENABLED 0; msg "Автозапуск дока выключен"
@@ -963,23 +963,23 @@ menu_dock() {
       "Режим: закреплён / ниже ("*")")
         v=$(pick "Режим дока" "Закреплён (всегда виден, с отступом)" "Ниже (у края экрана, всегда виден)") || continue
         case "$v" in
-          "Ниже"*) set_env DOCK_AUTOHIDE 1; msg "Док будет у самого края экрана (ниже)";;
-          *)       set_env DOCK_AUTOHIDE 0; msg "Док закреплён (с отступом)";;
+          "Ниже"*) set_env DOCK_AUTOHIDE 1; msg "Док будет у самого края экрана (применится после закрытия настроек)";;
+          *)       set_env DOCK_AUTOHIDE 0; msg "Док закреплён с отступом (применится после закрытия настроек)";;
         esac
-        dock_generate; dock_needs_restart=1;;
+        dock_generate; dock_mark_pending;;
       "Положение ("*")")
         v=$(pick "Положение дока" bottom top left right) || continue
-        set_env DOCK_POSITION "$v"; dock_generate; dock_needs_restart=1; msg "Положение: $v";;
+        set_env DOCK_POSITION "$v"; dock_generate; dock_mark_pending; msg "Положение: $v (применится после закрытия настроек)";;
       "Размер иконок ("*")")
         v=$(pick "Размер иконок, px" 18 20 22 24 26 28 32 36 40 48) || continue
-        set_env DOCK_ICON_SIZE "$v"; dock_generate; dock_needs_restart=1; msg "Размер иконок: $v";;
+        set_env DOCK_ICON_SIZE "$v"; dock_generate; dock_mark_pending; msg "Размер иконок: $v (применится после закрытия настроек)";;
       "Высота/толщина дока ("*")")
         v=$(pick "Высота/толщина, px" 36 40 44 48 52 56 64 72) || continue
-        set_env DOCK_HEIGHT "$v"; dock_generate; dock_needs_restart=1; msg "Высота: $v";;
+        set_env DOCK_HEIGHT "$v"; dock_generate; dock_mark_pending; msg "Высота: $v (применится после закрытия настроек)";;
       "Отступ от края ("*")")
         if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме «ниже» отступ от края не используется"; continue; fi
         v=$(pick "Отступ, px" 0 4 6 8 10 12 16 20 24) || continue
-        set_env DOCK_MARGIN "$v"; dock_generate; dock_needs_restart=1; msg "Отступ: $v";;
+        set_env DOCK_MARGIN "$v"; dock_generate; dock_mark_pending; msg "Отступ: $v (применится после закрытия настроек)";;
       "Скругление ("*")")
         # CSS-only: живая перегрузка без рестарта/рефлоу
         v=$(pick "Радиус, px" 0 8 12 16 20 24 28 32) || continue
@@ -990,33 +990,27 @@ menu_dock() {
         set_env DOCK_BG_OPACITY "$v"; dock_restyle; msg "Прозрачность: $v";;
       "Слой ("*")")
         v=$(pick "Слой" top overlay bottom) || continue
-        set_env DOCK_LAYER "$v"; dock_generate; dock_needs_restart=1; msg "Слой: $v";;
+        set_env DOCK_LAYER "$v"; dock_generate; dock_mark_pending; msg "Слой: $v (применится после закрытия настроек)";;
       "Показывать запущенные приложения: вкл/выкл ("*")")
         if [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ]; then set_env DOCK_SHOW_TASKBAR 0; else set_env DOCK_SHOW_TASKBAR 1; fi
-        dock_generate; dock_needs_restart=1; msg "Обновлено";;
+        dock_generate; dock_mark_pending; msg "Обновлено (применится после закрытия настроек)";;
       "Резервировать место под док: вкл/выкл ("*")")
         if [ "${DOCK_EXCLUSIVE:-0}" = "1" ]; then set_env DOCK_EXCLUSIVE 0; else set_env DOCK_EXCLUSIVE 1; fi
-        dock_generate; dock_needs_restart=1; msg "Обновлено";;
+        dock_generate; dock_mark_pending; msg "Обновлено (применится после закрытия настроек)";;
       "Закреплённые приложения…")
-        if menu_dock_apps; then
-          dock_needs_restart=1
-        fi;;
+        menu_dock_apps || true;;
       "Применить/перезапустить док")
-        if [ -x "$SCR/dock" ]; then
-          dock_apply
-          dock_needs_restart=0
-          msg "Док применён (перезапуск в фоне)"
-        else
-          err "Нет скрипта дока"
-        fi;;
+        dock_generate
+        dock_mark_pending
+        msg "Применится после закрытия настроек";;
       "Перегенерировать конфиг дока")
         dock_generate; msg "Конфиг дока сгенерирован";;
       "Редактировать dock.jsonc")
-        ${EDITOR:-nano} "$DOCK_CFG"; dock_generate; dock_needs_restart=1;;
+        ${EDITOR:-nano} "$DOCK_CFG"; dock_generate; dock_mark_pending; msg "Сохранено (применится после закрытия настроек)";;
       "Редактировать dock.css")
-        ${EDITOR:-nano} "$DOCK_CSS"; dock_restyle;;
+        ${EDITOR:-nano} "$DOCK_CSS"; dock_restyle; msg "CSS обновлён";;
       "Редактировать dock-apps.list")
-        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_needs_restart=1;;
+        ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_mark_pending; msg "Сохранено (применится после закрытия настроек)";;
     esac
   done
 }
@@ -1030,7 +1024,7 @@ menu_files() {
     "launch")       ${EDITOR:-nano} "$SCR/launch";;
     "power-menu")   ${EDITOR:-nano} "$SCR/power-menu";;
     "dock (скрипт)") ${EDITOR:-nano} "$SCR/dock";;
-    "dock-apps.list") ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_restart_detached;;
+    "dock-apps.list") ${EDITOR:-nano} "$DOCK_APPS"; dock_generate; dock_mark_pending; msg "Список дока сохранён (применится после закрытия настроек)";;
   esac
 }
 
@@ -1068,7 +1062,13 @@ while true; do
     "Тайлинг")                  menu_tiling;;
     "Приложения по умолчанию")  menu_apps;;
     "Файлы конфигов")           menu_files;;
-    "Применить всё")            reload; bar_reload; dock_apply; msg "Применено";;
+    "Применить всё")
+      reload; bar_reload; dock_apply
+      if [ -f "$DOCK_PENDING" ]; then
+        msg "Применено (док — после закрытия настроек)"
+      else
+        msg "Применено"
+      fi;;
     "Выход")                    exit 0;;
   esac
 done
