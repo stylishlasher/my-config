@@ -894,6 +894,7 @@ menu_dock_apps() {
 menu_dock() {
   while true; do
     load_env
+    clear
     local run_state="остановлен"; dock_is_running && run_state="запущен"
     local en_state="выкл"; [ "${DOCK_ENABLED:-0}" = "1" ] && en_state="вкл"
     local task_state="выкл"; [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ] && task_state="вкл"
