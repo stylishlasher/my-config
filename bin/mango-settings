@@ -898,11 +898,11 @@ menu_dock() {
     local en_state="выкл"; [ "${DOCK_ENABLED:-0}" = "1" ] && en_state="вкл"
     local task_state="выкл"; [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ] && task_state="вкл"
     local ex_state="нет"; [ "${DOCK_EXCLUSIVE:-0}" = "1" ] && ex_state="да"
-    local ah_state="закреплён"; [ "${DOCK_AUTOHIDE:-0}" = "1" ] && ah_state="автоскрытие"
+    local ah_state="закреплён"; [ "${DOCK_AUTOHIDE:-0}" = "1" ] && ah_state="ниже"
     local c; c=$(pick "Док (Waybar)  ·  $ah_state  ·  автозапуск: $en_state  ·  сейчас: $run_state" \
       "Показать/скрыть док сейчас" \
       "Автозапуск дока: вкл/выкл ($en_state)" \
-      "Режим: закреплён / автоскрытие ($ah_state)" \
+      "Режим: закреплён / ниже ($ah_state)" \
       "Положение (${DOCK_POSITION:-bottom})" \
       "Размер иконок (${DOCK_ICON_SIZE:-26})" \
       "Высота/толщина дока (${DOCK_HEIGHT:-48})" \
@@ -928,16 +928,15 @@ menu_dock() {
           set_env DOCK_ENABLED 1; msg "Автозапуск дока включён"
           dock_apply; [ -x "$SCR/dock" ] && "$SCR/dock" start >/dev/null 2>&1 || true
         fi;;
-      "Режим: закреплён / автоскрытие ("*")")
-        v=$(pick "Режим дока" "Закреплён (всегда виден)" "Автоскрытие (появляется при наведении на край)") || continue
+      "Режим: закреплён / ниже ("*")")
+        v=$(pick "Режим дока" "Закреплён (всегда виден, с отступом)" "Ниже (у края экрана, всегда виден)") || continue
         case "$v" in
-          "Автоскрытие"*)
+          "Ниже"*)
             set_env DOCK_AUTOHIDE 1
-            set_env DOCK_EXCLUSIVE 0
-            msg "Автоскрытие: док появится при наведении на край экрана";;
+            msg "Док будет у самого края экрана (ниже)";;
           *)
             set_env DOCK_AUTOHIDE 0
-            msg "Док закреплён (всегда виден)";;
+            msg "Док закреплён (с отступом)";;
         esac
         dock_apply;;
       "Положение ("*")")
@@ -950,7 +949,7 @@ menu_dock() {
         v=$(pick "Высота/толщина, px" 36 40 44 48 52 56 64 72) || continue
         set_env DOCK_HEIGHT "$v"; dock_apply; msg "Высота: $v";;
       "Отступ от края ("*")")
-        if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме автоскрытия отступ не используется"; continue; fi
+        if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме «ниже» отступ от края не используется"; continue; fi
         v=$(pick "Отступ, px" 0 4 6 8 10 12 16 20 24) || continue
         set_env DOCK_MARGIN "$v"; dock_apply; msg "Отступ: $v";;
       "Скругление ("*")")
@@ -966,7 +965,6 @@ menu_dock() {
         if [ "${DOCK_SHOW_TASKBAR:-1}" = "1" ]; then set_env DOCK_SHOW_TASKBAR 0; else set_env DOCK_SHOW_TASKBAR 1; fi
         dock_apply; msg "Обновлено";;
       "Резервировать место под док: вкл/выкл ("*")")
-        if [ "${DOCK_AUTOHIDE:-0}" = "1" ]; then err "В режиме автоскрытия место не резервируется"; continue; fi
         if [ "${DOCK_EXCLUSIVE:-0}" = "1" ]; then set_env DOCK_EXCLUSIVE 0; else set_env DOCK_EXCLUSIVE 1; fi
         dock_apply; msg "Обновлено";;
       "Закреплённые приложения…") menu_dock_apps;;

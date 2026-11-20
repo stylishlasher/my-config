@@ -20,7 +20,7 @@ DOCK_EXCLUSIVE=0
 DOCK_BG_OPACITY=0.78
 DOCK_RADIUS=20
 DOCK_SHOW_TASKBAR=1
-DOCK_AUTOHIDE=0    # 0 = закреплён (всегда виден), 1 = автоскрытие (появление при наведении)
+DOCK_AUTOHIDE=0    # 0 = закреплён (с отступом), 1 = ниже (у края экрана)
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
@@ -117,12 +117,12 @@ except FileNotFoundError:
 
 modules_center = []
 
-# В режиме автоскрытия док должен прилегать к краю, чтобы по наведению на полоску он раскрывался
+# В режиме "ниже" док прилегает к самому краю экрана (без отступа)
 edge_margin = 0 if autohide else margin
 config = {
     "layer": layer,
     "position": position,
-    "exclusive": bool(exclusive and not autohide),
+    "exclusive": bool(exclusive),
     "passthrough": False,
     "gtk-layer-shell": True,
     "spacing": 6,
@@ -135,7 +135,7 @@ config = {
     "modules-right": [],
 }
 
-# Размер дока (в автоскрытии раскрытие делаем через смещение окна в CSS)
+# Размер дока
 if position in ("bottom", "top"):
     config["height"] = height
 else:
@@ -201,46 +201,19 @@ app_ids = [f"#custom-dock-app-{i}" for i in range(len(apps))]
 app_sel = ",\n".join(app_ids) if app_ids else ""
 
 if autohide:
-    # Автоскрытие: вся панель прячется за край экрана, оставляя узкую полоску.
-    # При наведении курсора на эту полоску док выезжает.
-    visible_px = 4
-    hide_px = max(0, height - visible_px)
-
-    if position == "bottom":
-        hide_prop = "margin-bottom"
-        mod_margin = "2px 6px"
-    elif position == "top":
-        hide_prop = "margin-top"
-        mod_margin = "2px 6px"
-    elif position == "left":
-        hide_prop = "margin-left"
-        mod_margin = "6px 2px"
-    else:  # right
-        hide_prop = "margin-right"
-        mod_margin = "6px 2px"
-
+    # "Ниже": док всегда виден, но расположен у самого края экрана (ниже закреплённого)
     css += f"""
-/* Автоскрытие: скрыт за краем, раскрытие при наведении */
-window#waybar {{
-  {hide_prop}: -{hide_px}px;
-  transition: {hide_prop} 0.22s ease;
-}}
-
-window#waybar:hover {{
-  {hide_prop}: 0px;
-}}
-
 .modules-center {{
   background: alpha(@bar_bg, {bg_opacity});
   border: none;
   border-radius: {radius}px;
   padding: {pad_main};
-  margin: {mod_margin};
+  margin: 2px;
   box-shadow: none;
 }}
 """
 else:
-    # Закреплённый док: всегда виден, без рамок/теней
+    # Закреплённый док: всегда виден, с отступом от края
     css += f"""
 .modules-center {{
   background: alpha(@bar_bg, {bg_opacity});
