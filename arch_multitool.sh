@@ -99,7 +99,7 @@ APPS_MENU=(
 # --- MangoWC (Wayland-композитор Mango) — зависимости для дотфайлов из этого репо ---
 MANGO_MENU=(
     "fuzzel|Лаунчер приложений (нужен для меню/обоев)|on"
-    "gum|TUI для mango-settings (Super+S)|on"
+    "fzf|TUI/меню для mango-settings и bar-menu (Super+S)|on"
     "mako|Уведомления|on"
     "libnotify|notify-send для скриптов|on"
     "swaybg|Установка обоев|on"
@@ -1452,7 +1452,7 @@ install_mango_core() {
     echo "Будут установлены/применены dotfiles для MangoWC:"
     echo "  ~/.config/{mango,waybar,foot,fuzzel,mako,matugen} и ~/.local/bin/mango-settings"
     echo
-    if confirm "Установить зависимости MangoWC (waybar, fuzzel, gum, mako, swaybg, ...)?"; then
+    if confirm "Установить зависимости MangoWC (waybar, fuzzel, fzf, mako, swaybg, ...)?"; then
         install_mango_deps || warn "Часть зависимостей не установлена."
     fi
     apply_mango_config || return 1

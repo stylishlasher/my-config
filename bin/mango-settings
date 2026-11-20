@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mango-settings — интерактивные настройки MangoWC (на gum)
+# mango-settings — интерактивные настройки MangoWC (fzf TUI)
 # Запуск: Super+S (повторно — закрывает окно)
 CONF="$HOME/.config/mango/config.conf"
 ENVF="$HOME/.config/mango/settings.env"
@@ -15,39 +15,20 @@ DOCK_CSS="$HOME/.config/waybar/dock.css"
 DOCK_APPS="$HOME/.config/mango/dock-apps.list"
 DOCK_PENDING="${XDG_RUNTIME_DIR:-/tmp}/mango-dock.pending"
 
-dock_mark_pending() { : > "$DOCK_PENDING" 2>/dev/null || true; }
+dock_mark_pending() { printf 1 > "$DOCK_PENDING" 2>/dev/null || true; }
 
-# Применить отложенные изменения дока ПОСЛЕ закрытия окна настроек:
-# ждём завершения самого скрипта настроек ($$), чтобы рестарт дока никогда
-# не происходил, пока жив TUI (исключает "фантомное"/пустое меню).
-dock_apply_on_exit() {
+dock_apply_after_exit() {
   [ -f "$DOCK_PENDING" ] || return 0
   rm -f "$DOCK_PENDING"
+  local foot_pid="$PPID"   # родитель mango-settings = окно foot (при запуске через Super+S/launch)
+  # Дождаться закрытия окна настроек и только потом перезапустить док (вне TUI, чтобы не ломать интерфейс)
   setsid bash -c '
-    while kill -0 "$1" 2>/dev/null; do sleep 0.2; done
+    while kill -0 "$1" 2>/dev/null; do sleep 0.3; done
     sleep 0.2
     "$2" restart >/dev/null 2>&1 || true
-  ' _ "$$" "$SCR/dock" >/dev/null 2>&1 </dev/null &
+  ' _ "$foot_pid" "$SCR/dock" >/dev/null 2>&1 </dev/null &
 }
-trap dock_apply_on_exit EXIT
-
-# Применить сейчас: закрыть настройки, перезапустить док (без живого TUI) и
-# открыть настройки заново чистым окном — чтобы сразу увидеть результат.
-dock_apply_and_relaunch() {
-  dock_generate
-  rm -f "$DOCK_PENDING"
-  setsid bash -c '
-    while kill -0 "$1" 2>/dev/null; do sleep 0.2; done
-    "$2" restart >/dev/null 2>&1 || true
-    sleep 0.4
-    if [ -x "$3" ]; then
-      "$3" settings >/dev/null 2>&1 || true
-    else
-      foot --app-id mango-settings -e "$HOME/.local/bin/mango-settings" >/dev/null 2>&1 || true
-    fi
-  ' _ "$$" "$SCR/dock" "$SCR/launch" >/dev/null 2>&1 </dev/null &
-  exit 0
-}
+trap dock_apply_after_exit EXIT
 
 load_env() {
   BROWSER_CMD=librewolf; TERMINAL_CMD=foot; FILES_CMD=thunar
@@ -102,10 +83,35 @@ set_conf() {
   else echo "$1=$2" >> "$CONF"; fi
 }
 reload()  { mmsg dispatch reload_config >/dev/null 2>&1 || mmsg -d reload_config >/dev/null 2>&1; }
-msg()     { gum style --foreground "#a6e3a1" "  ✔  $1"; sleep 0.7; }
-err()     { gum style --foreground "#f38ba8" "  ✘  $1"; sleep 1.1; }
-pick()    { gum choose --height 18 --header "$1" "${@:2}"; }
-ask()     { gum input --placeholder "$1" --value "${2:-}"; }
+_have_fzf() { command -v fzf >/dev/null 2>&1; }
+msg()     { printf '\033[32m  ✔  %s\033[0m\n' "$1"; sleep 0.7; }
+err()     { printf '\033[31m  ✘  %s\033[0m\n' "$1"; sleep 1.1; }
+pick()    {
+  local header="$1"; shift
+  [ $# -eq 0 ] && return 1
+  if _have_fzf; then
+    printf '%s\n' "$@" | fzf --height=~60% --min-height=10 --layout=reverse --border=rounded \
+      --prompt="› " --header="$header" --no-multi --ansi --cycle --bind 'esc:abort' 2>/dev/null
+  else
+    local PS3="  $header > "
+    select opt in "$@"; do [ -n "${opt:-}" ] && { printf '%s\n' "$opt"; return 0; }; done
+    return 1
+  fi
+}
+ask()     {
+  local placeholder="$1" def="${2:-}" val prompt="  $placeholder"
+  [ -n "$def" ] && prompt="$prompt [$def]"
+  prompt="$prompt: "
+  if _have_fzf; then
+    # простой ввод в той же TTY (надёжнее, чем fzf-подмена)
+    read -r -e -p "$prompt" val || return 1
+  else
+    read -r -p "$prompt" val || return 1
+  fi
+  [ -z "${val:-}" ] && val="$def"
+  [ -z "${val:-}" ] && return 1
+  printf '%s' "$val"
+}
 bar_reload() { pkill -SIGUSR2 waybar 2>/dev/null; }
 
 toggle_conf() {  # ключ, название
@@ -720,7 +726,8 @@ menu_wallpaper() {
     "Выбрать из папки")
       local list; list=$(wp_list)
       [ -n "$list" ] || { err "В $WALLPAPER_DIR нет картинок (jpg/png/webp)"; return; }
-      v=$(echo "$list" | gum filter --height 18 --placeholder "поиск по названию…" --header "Обои (Enter — поставить, Esc — назад)") || return
+      v=$(printf '%s\n' "$list" | fzf --height=~60% --min-height=12 --layout=reverse --border=rounded \
+        --prompt="поиск › " --header="Обои (Enter — поставить, Esc — назад)" --no-multi --ansi --cycle --bind 'esc:abort') || return
       "$SCR/wallpaper" set "$WALLPAPER_DIR/$v" && msg "Обои: $v (сохранено)" || err "Не удалось";;
     "Случайные обои")  "$SCR/wallpaper" random && msg "Случайные обои (сохранено)" || err "Картинки не найдены";;
     "Сменить папку с обоями")
@@ -1019,9 +1026,9 @@ menu_dock() {
       "Закреплённые приложения…")
         menu_dock_apps || true;;
       "Применить/перезапустить док")
-        # Рестарт дока при живом TUI может давать "фантомное" меню, поэтому:
-        # закрываем настройки → рестарт дока → открываем настройки заново (чистое окно).
-        dock_apply_and_relaunch;;
+        dock_generate
+        dock_mark_pending
+        msg "Применится после закрытия настроек";;
       "Перегенерировать конфиг дока")
         dock_generate; msg "Конфиг дока сгенерирован";;
       "Редактировать dock.jsonc")
@@ -1052,17 +1059,15 @@ if [ "$1" = accent ] && [[ "$2" =~ ^[0-9a-fA-F]{6}$ ]]; then
   apply_accent "$2"; exit 0
 fi
 
-command -v gum >/dev/null || { echo "Нужен gum:  sudo pacman -S gum"; read -r; exit 1; }
+command -v fzf >/dev/null 2>&1 || { echo "Нужен fzf:  sudo pacman -S fzf"; read -r; exit 1; }
 
 # ── Главное меню ─────────────────────────────────────────────────────────
 while true; do
   load_env
   clear
-  gum style --border rounded --border-foreground "#$ACCENT" --foreground "#$ACCENT" \
-            --padding "0 3" --margin "1 2" --bold "MangoWC · Настройки"
-  gum style --foreground "#7f849c" "  Super+S или Esc — закрыть"
-  echo
-  c=$(gum choose --height 18 --header "Что настроить?" \
+  printf '\n  \033[1;35m━━━ MangoWC · Настройки ━━━\033[0m\n'
+  printf '  \033[90mSuper+S / Ctrl+C / Esc — закрыть\033[0m\n\n'
+  c=$(pick "Что настроить?" \
       "Тема и цвет (Matugen/ручной)" "Окна" "Эффекты и анимации" "Панель Waybar" "Док" "Обои" "Терминал" \
       "Клавиатура" "Тачпад" "Поведение" "Тайлинг" "Приложения по умолчанию" \
       "Файлы конфигов" "Применить всё" "Выход") || exit 0

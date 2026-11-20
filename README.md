@@ -37,7 +37,7 @@
 - **`waybar/`** — компактная настраиваемая панель (Catppuccin-совместимая палитра, прозрачность/«таблетки», кликабельные модули).
 - **`foot/`**, **`fuzzel/`**, **`mako/`** — терминал, лаунчер и уведомления в едином стиле.
 - **`matugen/`** — конфиг и шаблоны Matugen для генерации цветов из обоев (`waybar/colors.css`, `fuzzel`, `foot`, `mako`, акцент для MangoWC).
-- **`bin/mango-settings`** — TUI-настройки на `gum` (открываются по `Super+S`, повторно — закрыть).
+- **`bin/mango-settings`** — TUI-настройки на `fzf` (открываются по `Super+S`, повторно — закрыть).
 
 ### Быстрая установка MangoWC-конфигов
 
@@ -76,7 +76,7 @@ bash arch_multitool.sh
 
 ```bash
 sudo pacman -S --needed \
-  fuzzel gum mako libnotify swaybg waybar \
+  fuzzel fzf mako libnotify swaybg waybar \
   grim slurp wl-clipboard cliphist \
   brightnessctl playerctl pavucontrol foot swaylock \
   python networkmanager
@@ -133,7 +133,7 @@ sudo pacman -S --needed \
 
 ### Настройки (GUI) и режимы цвета
 
-Запуск: `Super + S` (или `~/.local/bin/mango-settings`). Интерфейс построен на `gum` и позволяет быстро менять параметры без ручного редактирования конфигов:
+Запуск: `Super + S` (или `~/.local/bin/mango-settings`). Интерфейс построен на `fzf` (в терминале) и позволяет быстро менять параметры без ручного редактирования конфигов:
 
 - **Тема и цвет** — два режима:
   - **Matugen (из обоев)** — палитра/акцент генерируются из текущих обоев (waybar, fuzzel, foot, mako, акцент MangoWC).
@@ -227,7 +227,7 @@ my-config/
 ├── mako/                  # уведомления mako
 ├── matugen/               # Matugen: config.toml + templates/
 ├── bin/
-│   └── mango-settings     # TUI-настройки MangoWC (gum)
+│   └── mango-settings     # TUI-настройки MangoWC (fzf)
 ├── fish/                  # конфиг fish
 ├── nvim/                  # конфиг Neovim
 ├── placeholders/          # скриншоты пресетов

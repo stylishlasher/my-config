@@ -38,9 +38,13 @@ if [ -x "$HOME/.config/mango/scripts/wallpaper" ]; then
   "$HOME/.config/mango/scripts/wallpaper" >/dev/null 2>&1 &
 fi
 
-# Уведомления и панель
-command -v mako >/dev/null 2>&1 && mako &
-command -v waybar >/dev/null 2>&1 && waybar &
+# Уведомления и панель (не запускать дубликаты, если уже есть сессия/демон)
+if command -v mako >/dev/null 2>&1 && ! pgrep -x mako >/dev/null 2>&1; then
+  mako >/dev/null 2>&1 &
+fi
+if command -v waybar >/dev/null 2>&1 && ! pgrep -x waybar >/dev/null 2>&1; then
+  waybar >/dev/null 2>&1 &
+fi
 
 # Док (настраиваемый Waybar-док)
 if [ "${DOCK_ENABLED:-0}" = "1" ] && [ -x "$HOME/.config/mango/scripts/dock" ]; then
@@ -49,8 +53,8 @@ fi
 
 # История буфера обмена (Super+C)
 if command -v cliphist >/dev/null 2>&1 && command -v wl-paste >/dev/null 2>&1; then
-  wl-paste --type text  --watch cliphist store >/dev/null 2>&1 &
-  wl-paste --type image --watch cliphist store >/dev/null 2>&1 &
+  pgrep -f 'wl-paste --type text --watch cliphist store' >/dev/null 2>&1 || wl-paste --type text  --watch cliphist store >/dev/null 2>&1 &
+  pgrep -f 'wl-paste --type image --watch cliphist store' >/dev/null 2>&1 || wl-paste --type image --watch cliphist store >/dev/null 2>&1 &
 fi
 
 # Ночной свет (wlsunset или gammastep)

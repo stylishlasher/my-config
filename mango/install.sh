@@ -141,5 +141,5 @@ fi
 echo ""
 echo "✓ Готово."
 echo "  Настройки: Super+S   Обои: Super+W   Случайные: Super+Shift+W   Блокировка: Super+L"
-echo "  Нужны пакеты: fuzzel gum mako libnotify swaybg waybar grim slurp wl-clipboard cliphist brightnessctl playerctl pavucontrol foot swaylock python3"
+echo "  Нужны пакеты: fuzzel fzf mako libnotify swaybg waybar grim slurp wl-clipboard cliphist brightnessctl playerctl pavucontrol foot swaylock python3"
 echo "  Опционально: matugen-bin (AUR, цвета из обоев), satty (редактор скриншотов), swayidle, wlsunset/gammastep, polkit-агент"

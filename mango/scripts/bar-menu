@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Кастомные меню для модулей Waybar (минималистичные, на gum в foot)
+# Кастомные меню для модулей Waybar (минималистичные, fzf/terminal UI)
 # Использование: bar-menu {clock|audio|network|battery}
 # Повторный запуск того же меню — закрывает его (toggle)
 set -u
@@ -61,26 +61,59 @@ toggle_menu() {
   exec foot --app-id "$id" -W 92x34 -e "$0" --internal "$@"
 }
 
-require_gum() {
-  have gum && return 0
-  echo "Нужен gum: sudo pacman -S gum"
+# ── UI helpers (fzf + ANSI) ──────────────────────────────────────────────
+clr() { printf '\033[%sm%s\033[0m' "$1" "$2"; }
+bold() { clr "1" "$1"; }
+fg() { clr "$1" "$2"; } # e.g. 31 red, 32 green, 33 yellow, 36 cyan, 90 gray
+
+ui_line() { printf '  %s\n' "$*"; }
+ui_dim()  { ui_line "$(fg '90' "$*")"; }
+ui_accent(){ ui_line "$(bold "$(fg '35' "$*")")"; }
+ui_warn() { ui_line "$(fg '33' "$*")"; }
+ui_err()  { ui_line "$(fg '31' "$*")"; }
+
+require_ui() {
+  have fzf && return 0
+  echo "Нужен fzf: sudo pacman -S fzf"
   echo; read -r -p "Нажмите Enter для выхода..." _ || true
   exit 1
 }
 
 header() {
   clear
-  gum style --border rounded --border-foreground "#${ACCENT}" --foreground "#${ACCENT}" \
-    --padding "0 2" --margin "0 0 1 0" --bold "$1"
+  local title="$1"
+  echo
+  ui_line "$(bold "$(fg '35' "━━━ $title ━━━")")"
+  echo
+}
+
+ui_choose() {
+  # ui_choose "header" "opt1" "opt2" ...
+  local hdr="$1"; shift
+  [ $# -eq 0 ] && return 1
+  printf '%s\n' "$@" | fzf --height=~40% --min-height=8 --layout=reverse --border=rounded \
+    --prompt="› " --header="$hdr" --no-multi --ansi --cycle \
+    --bind 'esc:abort' 2>/dev/null
+}
+
+ui_input() {
+  # ui_input "prompt" "default" -> prints value, returns 1 if empty/cancelled
+  local prompt="$1" def="${2:-}" val
+  if [ -n "$def" ]; then
+    read -r -e -p "  $prompt " -i "$def" val || return 1
+  else
+    read -r -e -p "  $prompt " val || return 1
+  fi
+  val="${val#${val%%[![:space:]]*}}"; val="${val%${val##*[![:space:]]}}"
+  [ -n "$val" ] || return 1
+  printf '%s' "$val"
 }
 
 # ── CLOCK: календарь + погода + прогноз (город задаётся вручную) ─────────
 weather_fetch() {
   local loc="$1" q
   [ -n "$loc" ] || return 0
-  # wttr.in принимает город/координаты; пробелы заменяем на +
   q="${loc// /+}"
-  # Убираем ведущие/лишние слэши на всякий случай
   q="${q#/}"
   curl -fsS --max-time 8 "https://wttr.in/${q}?lang=ru&M&format=j1" 2>/dev/null
 }
@@ -88,12 +121,11 @@ weather_fetch() {
 weather_render() {
   local json="$1" req_loc="$2"
   if [ -z "$json" ]; then
-    gum style --foreground "#f38ba8" "  Не удалось получить погоду."
-    gum style --foreground "#7f849c" "  Проверьте сеть и название города, затем нажмите «Обновить»."
+    ui_err "Не удалось получить погоду."
+    ui_dim "Проверьте сеть и название города, затем нажмите «Обновить»."
     return 0
   fi
 
-  # Текущая погода
   local current
   current="$(python3 - "$req_loc" <<'PY' "$json" 2>/dev/null
 import json, sys
@@ -145,7 +177,7 @@ print(f"META::Ощущается {feels}°C   •   Влажность {hum}%   
 PY
 )"
   if [ -z "$current" ]; then
-    gum style --foreground "#f38ba8" "  Ошибка разбора данных погоды."
+    ui_err "Ошибка разбора данных погоды."
     return 0
   fi
 
@@ -154,12 +186,11 @@ PY
   head="$(printf '%s\n' "$current"  | sed -n 's/^HEAD:://p'  | head -n1)"
   meta="$(printf '%s\n' "$current"  | sed -n 's/^META:://p'  | head -n1)"
 
-  gum style --foreground "#cdd6f4" --bold "  󰖐  ${place:-$req_loc}"
-  gum style --foreground "#89dceb" --bold "  ${head:-—}"
-  gum style --foreground "#7f849c" "  ${meta:-}"
+  ui_line "$(bold "󰖐  ${place:-$req_loc}")"
+  ui_line "$(fg '36' "$head")"
+  ui_dim "$meta"
   echo
 
-  # Прогноз на 3 дня
   local forecast
   forecast="$(python3 - <<'PY' "$json" 2>/dev/null
 import json, sys, datetime
@@ -189,7 +220,6 @@ def icon_for(desc):
     return "•"
 
 ru_days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
-today = datetime.date.today()
 labels = {0: "Сегодня", 1: "Завтра"}
 
 days = data.get('weather') or []
@@ -206,27 +236,23 @@ for i, d in enumerate(days[:3]):
     mid = hourly[len(hourly)//2] if hourly else {}
     desc = pick_desc(mid.get('lang_ru') or mid.get('weatherDesc') or [])
     ic = icon_for(desc)
-    # выравнивание колонок
     print(f"{label:<10}  {ic}  {mint:>3}..{maxt:<3}°C   {desc}")
 PY
 )"
   if [ -n "$forecast" ]; then
-    gum style --foreground "#a6adc8" --bold "  Прогноз"
+    ui_line "$(bold "Прогноз")"
     while IFS= read -r line; do
-      [ -n "$line" ] && gum style --foreground "#cdd6f4" "    $line"
+      [ -n "$line" ] && ui_line "  $line"
     done <<< "$forecast"
   fi
 }
 
 prompt_city() {
   local current="${WEATHER_LOCATION:-}" nl
-  nl=$(gum input \
-    --prompt "Город › " \
-    --placeholder "Например: Moscow, Berlin, Almaty, London" \
-    --value "$current") || return 1
-  nl="${nl#${nl%%[![:space:]]*}}"; nl="${nl%${nl##*[![:space:]]}}"
+  echo
+  nl=$(ui_input "Город (напр. Moscow, Berlin):" "$current") || return 1
   if [ -z "$nl" ]; then
-    gum style --foreground "#f9e2af" "  Город не указан."
+    ui_warn "Город не указан."
     sleep 0.8
     return 1
   fi
@@ -236,41 +262,27 @@ prompt_city() {
 }
 
 menu_clock() {
-  require_gum
+  require_ui
   load_env
   while true; do
     header "Календарь и погода"
 
-    # Время
-    local time_block
-    time_block="$(printf '%s\n%s' \
-      "$(gum style --foreground "#${ACCENT}" --bold "  $(date '+%H:%M:%S')")" \
-      "$(gum style --foreground "#bac2de" "  $(date '+%A, %d %B %Y')")")"
-    gum style --border rounded --border-foreground "#45475a" --padding "0 2" --margin "0 0 1 0" "$time_block"
+    ui_line "$(bold "$(date '+%H:%M:%S')")"
+    ui_dim "$(date '+%A, %d %B %Y')"
+    echo
 
-    # Календарь
     if have cal; then
-      local cal_out
-      cal_out="$(cal -m 2>/dev/null || cal 2>/dev/null || true)"
-      if [ -n "$cal_out" ]; then
-        gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" \
-          --foreground "#a6adc8" "$cal_out"
-      fi
+      cal -m 2>/dev/null | sed 's/^/  /' || cal 2>/dev/null | sed 's/^/  /' || true
+      echo
     fi
 
-    # Погода
     if [ -z "${WEATHER_LOCATION:-}" ]; then
-      local no_city
-      no_city="$(printf '%s\n\n%s\n%s' \
-        "$(gum style --foreground "#cdd6f4" --bold "󰖐  Погода")" \
-        "$(gum style --foreground "#7f849c" "Город не указан.")" \
-        "$(gum style --foreground "#7f849c" "Укажите название вашего города, чтобы видеть погоду и прогноз.")")"
-      gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" "$no_city"
+      ui_line "$(bold "󰖐  Погода")"
+      ui_dim "Город не указан."
+      ui_dim "Укажите название вашего города, чтобы видеть погоду и прогноз."
       echo
       local c0
-      c0=$(gum choose --height 6 --header "Действие" \
-        "Указать город" \
-        "Закрыть") || exit 0
+      c0=$(ui_choose "Действие" "Указать город" "Закрыть") || exit 0
       case "$c0" in
         "Указать город") prompt_city || true ;;
         *) exit 0 ;;
@@ -278,18 +290,14 @@ menu_clock() {
       continue
     fi
 
-    gum style --border rounded --border-foreground "#313244" --padding "0 2" --margin "0 0 1 0" \
-      "$(gum style --foreground "#cdd6f4" --bold "󰖐  Погода")"
+    ui_line "$(bold "󰖐  Погода")"
     local wjson
     wjson="$(weather_fetch "$WEATHER_LOCATION")"
     weather_render "$wjson" "$WEATHER_LOCATION"
     echo
 
     local c
-    c=$(gum choose --height 8 --header "Действие" \
-      "Обновить" \
-      "Сменить город" \
-      "Закрыть") || exit 0
+    c=$(ui_choose "Действие" "Обновить" "Сменить город" "Закрыть") || exit 0
     case "$c" in
       "Обновить") continue ;;
       "Сменить город") prompt_city || true ;;
@@ -327,17 +335,17 @@ audio_mute_toggle() {
 }
 
 menu_audio() {
-  require_gum
+  require_ui
   load_env
   while true; do
     header "Звук"
     local info vol mute mlabel
     info=$(audio_info); vol="${info%%|*}"; mute="${info##*|}"
     [ "$mute" = "yes" ] && mlabel="выкл (muted)" || mlabel="вкл"
-    gum style --foreground "#cdd6f4" "  Громкость: ${vol}%   ·   Звук: ${mlabel}"
+    ui_line "Громкость: $(bold "${vol}%")   ·   Звук: $mlabel"
     echo
     local c
-    c=$(gum choose --height 12 --header "Действие" \
+    c=$(ui_choose "Действие" \
       "Громкость 100%" "Громкость 75%" "Громкость 50%" "Громкость 25%" "Громкость 10%" \
       "Вкл/выкл звук (mute)" \
       "Открыть микшер (pavucontrol)" \
@@ -359,24 +367,24 @@ menu_audio() {
 
 # ── NETWORK ──────────────────────────────────────────────────────────────
 menu_network() {
-  require_gum
+  require_ui
   load_env
   while true; do
     header "Сеть"
     if have nmcli; then
-      gum style --foreground "#cdd6f4" "  Состояние:"
+      ui_line "$(bold "Состояние:")"
       nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status 2>/dev/null | \
         awk -F: '{printf "   • %s (%s): %s %s\n",$1,$2,$3,($4!=""&&$4!="--"?"— "$4:"")}' || echo "   (недоступно)"
       echo
       local wifi
       wifi=$(nmcli -t -f WIFI g 2>/dev/null | head -1)
-      gum style --foreground "#7f849c" "  Wi‑Fi: ${wifi:-?}"
+      ui_dim "Wi‑Fi: ${wifi:-?}"
     else
-      echo "  nmcli (NetworkManager) не найден."
+      ui_dim "nmcli (NetworkManager) не найден."
     fi
     echo
     local c
-    c=$(gum choose --height 12 --header "Действие" \
+    c=$(ui_choose "Действие" \
       "Открыть nmtui (подключение/пароли)" \
       "Включить Wi‑Fi" "Выключить Wi‑Fi" \
       "Обновить" "Закрыть") || exit 0
@@ -394,7 +402,7 @@ menu_network() {
 
 # ── BATTERY / POWER ──────────────────────────────────────────────────────
 menu_battery() {
-  require_gum
+  require_ui
   load_env
   while true; do
     header "Питание и батарея"
@@ -405,7 +413,7 @@ menu_battery() {
       local cap status
       cap=$(cat "$bat/capacity" 2>/dev/null || echo "?")
       status=$(cat "$bat/status" 2>/dev/null || echo "?")
-      gum style --foreground "#cdd6f4" "  Батарея: ${cap}%  ·  ${status}"
+      ui_line "Батарея: $(bold "${cap}%")  ·  ${status}"
       [ -f "$bat/power_now" ] && [ -f "$bat/energy_now" ] && {
         python3 - "$bat" <<'PY' 2>/dev/null || true
 import sys, os
@@ -423,14 +431,14 @@ PY
       echo
     done
     if [ "$shown" -eq 0 ]; then
-      gum style --foreground "#7f849c" "  Батарея не обнаружена (настольный ПК?)."
+      ui_dim "Батарея не обнаружена (настольный ПК?)."
       echo
     fi
 
     if have powerprofilesctl; then
       local prof
       prof=$(powerprofilesctl get 2>/dev/null || echo "недоступно")
-      gum style --foreground "#7f849c" "  Профиль питания: ${prof}"
+      ui_dim "Профиль питания: ${prof}"
       echo
     fi
 
@@ -441,7 +449,7 @@ PY
     opts+=("Открыть меню питания" "Закрыть")
 
     local c
-    c=$(gum choose --height 12 --header "Действие" "${opts[@]}") || exit 0
+    c=$(ui_choose "Действие" "${opts[@]}") || exit 0
     case "$c" in
       "Обновить") continue ;;
       "Профиль: power-saver")   powerprofilesctl set power-saver 2>/dev/null || true ;;
