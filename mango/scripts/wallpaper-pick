@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # Выбор обоев через fuzzel (Super+W). Выбор сохраняется и переживает перезагрузку.
+# Повторный запуск закрывает меню.
+
 ENVF="$HOME/.config/mango/settings.env"
+PROMPT="Обои ❯ "
 [ -f "$ENVF" ] && . "$ENVF"
+
+if pgrep -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1; then
+  pkill -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1 || true
+  exit 0
+fi
+
 d="${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
 [ -d "$d" ] || d="$HOME/Pictures"
 
@@ -13,7 +22,7 @@ if [ -z "$list" ]; then
   exit 1
 fi
 
-choice=$( { echo "★ Случайные обои"; echo "$list"; } | fuzzel --dmenu --lines 12 --width 50 --prompt "Обои ❯ ")
+choice=$( { echo "★ Случайные обои"; echo "$list"; } | fuzzel --dmenu --lines 12 --width 50 --prompt "$PROMPT")
 [ -n "$choice" ] || exit 0
 if [ "$choice" = "★ Случайные обои" ]; then
   exec "$HOME/.config/mango/scripts/wallpaper" random

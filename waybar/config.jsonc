@@ -76,7 +76,7 @@
     "format-ethernet": "󰈀",
     "format-disconnected": "󰌙",
     "tooltip-format": "{essid} {ipaddr}",
-    "on-click": "foot --app-id mango-nmtui -e nmtui"
+    "on-click": "~/.config/mango/scripts/launch nmtui"
   },
   "battery": {
     "states": {

@@ -31,6 +31,22 @@ case "$1" in
     fi
     exec foot --app-id mango-settings -W 95x36 -e "$HOME/.local/bin/mango-settings"
     ;;
+  nmtui)
+    # Тоггл: открыто → закрыть
+    if pgrep -f -- '--app-id mango-nmtui' >/dev/null 2>&1; then
+      pkill -f -- '--app-id mango-nmtui'
+      exit 0
+    fi
+    exec foot --app-id mango-nmtui -e nmtui
+    ;;
+  launcher)
+    # Тоггл лаунчера приложений (не закрывает dmenu-меню)
+    if pgrep -x fuzzel >/dev/null 2>&1 && ! pgrep -f 'fuzzel.*--dmenu' >/dev/null 2>&1; then
+      pkill -x fuzzel >/dev/null 2>&1 || true
+      exit 0
+    fi
+    exec fuzzel
+    ;;
   *)
-    echo "Usage: $0 {browser|terminal|files|settings}"; exit 1 ;;
+    echo "Usage: $0 {browser|terminal|files|settings|nmtui|launcher}"; exit 1 ;;
 esac

@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
-# Меню питания
+# Меню питания (повторный запуск закрывает меню)
+
+PROMPT="Питание ❯ "
+if pgrep -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1; then
+  pkill -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1 || true
+  exit 0
+fi
 
 choice=$(printf '%s\n' \
   "1  Блокировка" \
@@ -7,7 +13,7 @@ choice=$(printf '%s\n' \
   "3  Сон" \
   "4  Перезагрузка" \
   "5  Выключение" \
-  | fuzzel --dmenu --lines 5 --width 26 --prompt "Питание ❯ " 2>/dev/null)
+  | fuzzel --dmenu --lines 5 --width 26 --prompt "$PROMPT" 2>/dev/null)
 
 case "$choice" in
   1*|Блокировка*)

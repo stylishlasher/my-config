@@ -1,15 +1,25 @@
 #!/usr/bin/env bash
 # История буфера обмена (Super+C). Нужны: cliphist, wl-clipboard, fuzzel.
-# clipboard         — выбрать из истории и вставить в буфер
+# clipboard         — выбрать из истории и вставить в буфер (повторный запуск закрывает меню)
 # clipboard clear   — очистить историю
+
+PROMPT="Буфер ❯ "
+
 if ! command -v cliphist >/dev/null 2>&1; then
   notify-send "Буфер обмена" "Поставь cliphist: sudo pacman -S cliphist" 2>/dev/null
   exit 1
 fi
-if [ "$1" = clear ]; then
+
+if [ "${1:-}" = clear ]; then
   cliphist wipe && notify-send -t 1500 "Буфер обмена" "История очищена" 2>/dev/null
   exit 0
 fi
-choice=$(cliphist list | fuzzel --dmenu --lines 12 --width 60 --prompt "Буфер ❯ ")
+
+if pgrep -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1; then
+  pkill -f "fuzzel.*--dmenu.*--prompt ${PROMPT}" >/dev/null 2>&1 || true
+  exit 0
+fi
+
+choice=$(cliphist list | fuzzel --dmenu --lines 12 --width 60 --prompt "$PROMPT")
 [ -n "$choice" ] || exit 0
 printf '%s' "$choice" | cliphist decode | wl-copy
